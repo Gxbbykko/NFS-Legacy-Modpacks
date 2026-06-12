@@ -1,10 +1,16 @@
 # NFS Legacy Modpacks
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![Installer](https://img.shields.io/badge/installer-Inno%20Setup-purple)
+![Rollback](https://img.shields.io/badge/rollback-validated-success)
+![Games](https://img.shields.io/badge/supported%20titles-6-orange)
+
 Modern installer framework and restoration-focused modpacks for classic **Need for Speed** titles.
 
 This repository provides standardized **Inno Setup installer architecture**, rollback validation workflows, and restoration-safe installation systems for legacy Need for Speed modpacks.
 
-The goal of this project is to modernize installation for legacy Need for Speed games while preserving **reliability, reversibility, and deterministic rollback**.
+The goal of this project is to modernize installation for legacy Need for Speed games while preserving **reliability, reversibility, deterministic rollback, and clean restoration**.
 
 ---
 
@@ -56,7 +62,7 @@ Installer startup and welcome screen.
 
 ### Installation Validation Warning
 
-Example warning shown when the game installation does not meet required validation requirements.
+Example warning shown when the selected game installation does not meet validation requirements.
 
 ![Underground Installer Validation](screenshots/installers/nfsu-installer-validation-warning.png)
 
