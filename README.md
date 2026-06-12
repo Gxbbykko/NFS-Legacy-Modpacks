@@ -2,61 +2,151 @@
 
 Modern installer framework and restoration-focused modpacks for classic Need for Speed titles.
 
-This project provides Inno Setup installer scripts, rollback validation documentation, and a shared installer architecture for legacy Need for Speed modpacks.
+This repository provides Inno Setup installer scripts, rollback validation documentation, and a unified installer architecture for legacy Need for Speed modpacks.
+
+---
 
 ## Supported Titles
 
-- Need for Speed Underground
-- Need for Speed Underground 2
-- Need for Speed Most Wanted
-- Need for Speed Carbon
-- Need for Speed ProStreet
-- Need for Speed Undercover
+* Need for Speed Underground
+* Need for Speed Underground 2
+* Need for Speed Most Wanted
+* Need for Speed Carbon
+* Need for Speed ProStreet
+* Need for Speed Undercover
 
-## Installer Features
+---
 
-- FreeArc-based archive extraction
-- Splash screen support
-- Game folder validation
-- Large Address Aware executable check
-- Manifest-based installed file tracking
-- Backup restoration during uninstall
-- Clean rollback using `_LegacyInstaller`
-- SHA256 rollback verification workflow
+## Features
+
+### Installer Features
+
+* FreeArc-based archive extraction
+* Splash screen support
+* Game folder validation
+* Large Address Aware (4GB Patch) executable verification
+* Manifest-based installed file tracking
+* Backup restoration during uninstall
+* Clean rollback system using `_LegacyInstaller`
+* SHA256 rollback verification workflow
+
+### Validation Features
+
+* File hash comparison before install
+* File hash comparison after uninstall
+* Rollback integrity verification
+* Deterministic uninstall validation
+
+---
 
 ## Rollback System
 
-Each installer tracks installed files using:
+Each installer tracks installed files through:
 
 ```txt
 _LegacyInstaller/install_manifest.txt
+```
 
 During uninstall, the installer:
 
-Deletes files listed in the install manifest.
-Restores original files from the Backup folder.
-Removes empty leftover directories.
-Returns the game folder to the pre-install state.
+1. Deletes files listed in the install manifest
+2. Restores original files from the `Backup` folder
+3. Removes empty leftover directories
+4. Returns the game folder to the original pre-install state
 
-Rollback validation is documented in:
+Rollback validation documentation:
 
+```txt
 docs/rollback-validation.md
 docs/hashing-commands.md
+```
 
-Repository Contents
+A successful rollback validation produces:
 
-docs/       Documentation and validation notes
-source/     Inno Setup installer scripts and source projects
-templates/  Reusable installer template
-screenshots/ Project screenshots
-releases/   Release notes/placeholders
+```powershell
+Compare-Object `
+-ReferenceObject $baseline `
+-DifferenceObject $after `
+-Property Path, Hash
+```
 
-Important Notice
+With **no output**, confirming a clean uninstall and restoration.
 
-This repository does not include commercial game files, copyrighted game assets, or modpack archive payloads.
+---
 
-Users must own the original games and provide their own game installations.
+## Repository Structure
 
-License
+```txt
+NFS-Legacy-Modpacks/
+├── docs/
+├── releases/
+├── screenshots/
+├── source/
+│   ├── ArcRunner/
+│   ├── Inno/
+│   └── Splash/
+├── templates/
+├── .gitignore
+├── LICENSE
+└── README.md
+```
 
-This project is licensed under the MIT License.
+### Folder Overview
+
+| Folder         | Purpose                                      |
+| -------------- | -------------------------------------------- |
+| `docs/`        | Validation, hashing, and build documentation |
+| `source/`      | Inno Setup scripts and source files          |
+| `templates/`   | Shared reusable installer template           |
+| `screenshots/` | Installer and project screenshots            |
+| `releases/`    | Release placeholders and builds              |
+
+---
+
+## Installer Philosophy
+
+The goal of this project is to modernize installation for legacy Need for Speed games while preserving reliability and reversibility.
+
+Every modpack installer is designed to:
+
+* Validate game installation state
+* Detect unsupported or improperly patched copies
+* Install safely
+* Support rollback
+* Restore the game cleanly
+
+The uninstall process is treated as equally important as installation.
+
+---
+
+## Important Notice
+
+This repository **does not include**:
+
+* Commercial game files
+* EA copyrighted assets
+* Modpack archive payloads
+* Redistributed game executables
+
+You must legally own the original games and provide your own game installation.
+
+---
+
+## Roadmap
+
+* [x] Underground installer architecture
+* [x] Underground 2 installer architecture
+* [x] Most Wanted installer architecture
+* [x] Carbon installer architecture
+* [x] ProStreet installer architecture
+* [x] Undercover installer architecture
+* [ ] Shared reusable installer template
+* [ ] Public release packaging
+* [ ] Documentation expansion
+* [ ] Screenshot gallery
+
+---
+
+## License
+
+Licensed under the MIT License.
