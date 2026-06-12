@@ -67,6 +67,11 @@ begin
     Result := Size = ExpectedSize;
 end;
 
+function RequiredFolderExists(BaseDir, FolderName: String): Boolean;
+begin
+  Result := DirExists(AddBackslash(BaseDir) + FolderName);
+end;
+
 function IsLargeAddressAware(ExePath: String): Boolean;
 var
   ResultCode: Integer;
@@ -91,11 +96,6 @@ begin
       ResultCode
   ) then
     Result := (ResultCode = 0);
-end;
-
-function RequiredFolderExists(BaseDir, FolderName: String): Boolean;
-begin
-  Result := DirExists(AddBackslash(BaseDir) + FolderName);
 end;
 
 function IsNFSUInstallReady(BaseDir: String): Boolean;
@@ -207,6 +207,23 @@ begin
   end;
 end;
 
+procedure MakeWritable(FileName: String);
+var
+  ResultCode: Integer;
+begin
+  if FileExists(FileName) then
+  begin
+    Exec(
+      ExpandConstant('{cmd}'),
+      '/C attrib -R -S -H "' + FileName + '"',
+      '',
+      SW_HIDE,
+      ewWaitUntilTerminated,
+      ResultCode
+    );
+  end;
+end;
+
 function ExtractArchiveToTemp(): Boolean;
 var
   ResultCode: Integer;
@@ -252,7 +269,7 @@ begin
   WizardForm.StatusLabel.Caption := 'Installing Underground Legacy Modpack...';
   WizardForm.FilenameLabel.Caption := 'Extracting archive silently. Please wait...';
   WizardForm.Refresh;
-  
+
   if not Exec(ArcRunnerExe, Params, '', SW_HIDE, ewNoWait, ResultCode) then
   begin
     CreateErrorReport('Failed to launch ArcRunner.exe.');
@@ -349,6 +366,18 @@ begin
           end
           else
           begin
+            if FileExists(DestPath) then
+            begin
+              MakeWritable(DestPath);
+
+              if not DeleteFile(DestPath) then
+              begin
+                CreateErrorReport('Failed to delete existing file before overwrite: ' + DestPath);
+                Result := False;
+                Exit;
+              end;
+            end;
+
             if not CopyFile(SourcePath, DestPath, False) then
             begin
               CreateErrorReport('Failed to copy file: ' + SourcePath + ' -> ' + DestPath);
@@ -390,66 +419,6 @@ begin
   Result := CopyDirectoryRecursive(TempExtractPath, WizardDirValue(), TempExtractPath, ManifestPath);
 end;
 
-procedure RunSplash;
-var
-  ResultCode: Integer;
-begin
-  ExtractTemporaryFile('Splash.exe');
-  ExtractTemporaryFile('splash.png');
-
-  Exec(
-    ExpandConstant('{tmp}\Splash.exe'),
-    '"' + ExpandConstant('{tmp}\splash.png') + '"',
-    '',
-    SW_SHOW,
-    ewWaitUntilTerminated,
-    ResultCode
-  );
-end;
-
-procedure InitializeWizard;
-begin
-  UserAcceptedUnsafeInstall := False;
-  RunSplash;
-end;
-
-function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  MsgResult: Integer;
-begin
-  Result := True;
-
-  if CurPageID = wpSelectDir then
-  begin
-    if not IsNFSUInstallReady(WizardDirValue()) then
-    begin
-      MsgResult :=
-        MsgBox(
-          'Your game does not appear to be patched to the required state.'#13#10#13#10 +
-          '{#MyAppName} requires:'#13#10 +
-          '• Need for Speed Underground patched to v1.4'#13#10 +
-          '• {#GameExe} patched with 4GB / Large Address Aware'#13#10 +
-          '• A complete game installation with required v1.4 files'#13#10#13#10 +
-          'Installing anyway may break your game, cause crashes, missing textures, or failed startup.'#13#10#13#10 +
-          'YES = Continue anyway at your own risk'#13#10 +
-          'NO = Go back and patch the game first',
-          mbCriticalError,
-          MB_YESNO
-        );
-
-      if MsgResult = IDYES then
-      begin
-        UserAcceptedUnsafeInstall := True;
-        Result := True;
-      end
-      else
-      begin
-        Result := False;
-      end;
-    end;
-  end;
-end;
-
 procedure RestoreBackupFiles(SourceDir, DestDir: String);
 var
   FindRec: TFindRec;
@@ -476,6 +445,13 @@ begin
           else
           begin
             ForceDirectories(ExtractFileDir(DestPath));
+
+            if FileExists(DestPath) then
+            begin
+              MakeWritable(DestPath);
+              DeleteFile(DestPath);
+            end;
+
             CopyFile(SourcePath, DestPath, False);
           end;
         end;
@@ -525,7 +501,10 @@ begin
       TargetPath := AddBackslash(GameDir) + Line;
 
       if FileExists(TargetPath) then
+      begin
+        MakeWritable(TargetPath);
         DeleteFile(TargetPath);
+      end;
     end;
   end;
 end;
@@ -598,6 +577,66 @@ begin
         mbError,
         MB_OK
       );
+    end;
+  end;
+end;
+
+procedure RunSplash;
+var
+  ResultCode: Integer;
+begin
+  ExtractTemporaryFile('Splash.exe');
+  ExtractTemporaryFile('splash.png');
+
+  Exec(
+    ExpandConstant('{tmp}\Splash.exe'),
+    '"' + ExpandConstant('{tmp}\splash.png') + '"',
+    '',
+    SW_SHOW,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
+procedure InitializeWizard;
+begin
+  UserAcceptedUnsafeInstall := False;
+  RunSplash;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  MsgResult: Integer;
+begin
+  Result := True;
+
+  if CurPageID = wpSelectDir then
+  begin
+    if not IsNFSUInstallReady(WizardDirValue()) then
+    begin
+      MsgResult :=
+        MsgBox(
+          'Your game does not appear to be patched to the required state.'#13#10#13#10 +
+          '{#MyAppName} requires:'#13#10 +
+          '• Need for Speed Underground patched to v1.4'#13#10 +
+          '• {#GameExe} patched with 4GB / Large Address Aware'#13#10 +
+          '• A complete game installation with required v1.4 files'#13#10#13#10 +
+          'Installing anyway may break your game, cause crashes, missing textures, or failed startup.'#13#10#13#10 +
+          'YES = Continue anyway at your own risk'#13#10 +
+          'NO = Go back and patch the game first',
+          mbCriticalError,
+          MB_YESNO
+        );
+
+      if MsgResult = IDYES then
+      begin
+        UserAcceptedUnsafeInstall := True;
+        Result := True;
+      end
+      else
+      begin
+        Result := False;
+      end;
     end;
   end;
 end;
