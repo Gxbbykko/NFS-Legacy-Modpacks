@@ -1,8 +1,10 @@
 # NFS Legacy Modpacks
 
-Modern installer framework and restoration-focused modpacks for classic Need for Speed titles.
+Modern installer framework and restoration-focused modpacks for classic **Need for Speed** titles.
 
-This repository provides Inno Setup installer scripts, rollback validation documentation, and a unified installer architecture for legacy Need for Speed modpacks.
+This repository provides standardized **Inno Setup installer architecture**, rollback validation workflows, and restoration-safe installation systems for legacy Need for Speed modpacks.
+
+The goal of this project is to modernize installation for legacy Need for Speed games while preserving **reliability, reversibility, and deterministic rollback**.
 
 ---
 
@@ -23,7 +25,8 @@ This repository provides Inno Setup installer scripts, rollback validation docum
 
 * FreeArc-based archive extraction
 * Splash screen support
-* Game folder validation
+* Automatic game folder detection
+* Game installation validation
 * Large Address Aware (4GB Patch) executable verification
 * Manifest-based installed file tracking
 * Backup restoration during uninstall
@@ -32,16 +35,86 @@ This repository provides Inno Setup installer scripts, rollback validation docum
 
 ### Validation Features
 
-* File hash comparison before install
+* File hash comparison before installation
 * File hash comparison after uninstall
 * Rollback integrity verification
 * Deterministic uninstall validation
+* Manifest-based file cleanup
+* Vanilla restoration confirmation
+
+---
+
+## Screenshots
+
+The installer framework includes rollback-safe workflows designed to restore the original game state after uninstall.
+
+### Underground Installer
+
+Installer startup and welcome screen.
+
+![Underground Installer Welcome](screenshots/installers/nfsu-installer-welcome.png)
+
+### Installation Validation Warning
+
+Example warning shown when the game installation does not meet required validation requirements.
+
+![Underground Installer Validation](screenshots/installers/nfsu-installer-validation-warning.png)
+
+### Installation Ready State
+
+Installer configured and ready to begin installation.
+
+![Underground Installer Ready](screenshots/installers/nfsu-installer-ready.png)
+
+### Installation Progress
+
+Archive extraction and installation progress with logging enabled.
+
+![Underground Installer Progress](screenshots/installers/nfsu-installer-progress-96.png)
+
+### Installation Complete
+
+Successful installation state.
+
+![Underground Installer Complete](screenshots/installers/nfsu-installer-complete.png)
+
+### Uninstall Completion
+
+Successful uninstall and restoration state.
+
+![Underground Uninstall Complete](screenshots/installers/nfsu-uninstaller-complete.png)
+
+### Rollback Validation
+
+Successful rollback verification after uninstall.
+
+A clean comparison result (**no output**) confirms that the post-uninstall game state matches the original vanilla baseline.
+
+![NFSU Rollback Success](screenshots/rollback/nfsu-rollback-success.png)
+
+### Manifest Tracking
+
+Example of generated installation manifest tracking modpack-installed files for safe removal during uninstall.
+
+![NFSU Manifest Example](screenshots/rollback/nfsu-manifest-example.png)
+
+### Legacy Installer Structure
+
+Generated uninstall infrastructure used for rollback and restoration.
+
+![Legacy Installer Folder](screenshots/rollback/nfsu-legacyinstaller-folder.png)
+
+### Rollback Confirmation
+
+Example of rollback confirmation during uninstall.
+
+![Rollback Confirmed](screenshots/rollback/nfsu-uninstaller-rollback-confirmed.png)
 
 ---
 
 ## Rollback System
 
-Each installer tracks installed files through:
+Each installer tracks installed files using:
 
 ```txt
 _LegacyInstaller/install_manifest.txt
@@ -52,9 +125,9 @@ During uninstall, the installer:
 1. Deletes files listed in the install manifest
 2. Restores original files from the `Backup` folder
 3. Removes empty leftover directories
-4. Returns the game folder to the original pre-install state
+4. Returns the game folder to its original pre-install state
 
-Rollback validation documentation:
+Rollback validation documentation is available in:
 
 ```txt
 docs/rollback-validation.md
@@ -70,7 +143,7 @@ Compare-Object `
 -Property Path, Hash
 ```
 
-With **no output**, confirming a clean uninstall and restoration.
+With **no output**, confirming a clean uninstall and exact restoration.
 
 ---
 
@@ -81,39 +154,40 @@ NFS-Legacy-Modpacks/
 ├── docs/
 ├── releases/
 ├── screenshots/
+│   ├── installers/
+│   └── rollback/
 ├── source/
 │   ├── ArcRunner/
 │   ├── Inno/
 │   └── Splash/
 ├── templates/
 ├── .gitignore
+├── CHANGELOG.md
 ├── LICENSE
 └── README.md
 ```
 
 ### Folder Overview
 
-| Folder         | Purpose                                      |
-| -------------- | -------------------------------------------- |
-| `docs/`        | Validation, hashing, and build documentation |
-| `source/`      | Inno Setup scripts and source files          |
-| `templates/`   | Shared reusable installer template           |
-| `screenshots/` | Installer and project screenshots            |
-| `releases/`    | Release placeholders and builds              |
+| Folder         | Purpose                                                |
+| -------------- | ------------------------------------------------------ |
+| `docs/`        | Validation, hashing, rollback, and build documentation |
+| `source/`      | Inno Setup scripts and source components               |
+| `templates/`   | Shared reusable installer templates                    |
+| `screenshots/` | Installer and rollback validation screenshots          |
+| `releases/`    | Release placeholders and packaged builds               |
 
 ---
 
 ## Installer Philosophy
 
-The goal of this project is to modernize installation for legacy Need for Speed games while preserving reliability and reversibility.
-
-Every modpack installer is designed to:
+Every installer in this project is designed to:
 
 * Validate game installation state
 * Detect unsupported or improperly patched copies
 * Install safely
-* Support rollback
-* Restore the game cleanly
+* Support deterministic rollback
+* Restore the original game cleanly
 
 The uninstall process is treated as equally important as installation.
 
@@ -140,13 +214,15 @@ You must legally own the original games and provide your own game installation.
 * [x] Carbon installer architecture
 * [x] ProStreet installer architecture
 * [x] Undercover installer architecture
+* [x] Rollback validation framework
+* [x] Screenshot documentation
 * [ ] Shared reusable installer template
 * [ ] Public release packaging
 * [ ] Documentation expansion
-* [ ] Screenshot gallery
+* [ ] Multi-title screenshot gallery
 
 ---
 
 ## License
 
-Licensed under the MIT License.
+Licensed under the **MIT License**.
