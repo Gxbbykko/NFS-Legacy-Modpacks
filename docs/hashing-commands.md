@@ -1,8 +1,14 @@
 # Hashing Commands
 
-Run inside the selected game test folder.
+This document contains reusable PowerShell commands for validating installer rollback integrity.
 
-## Clean Previous Test Files
+These commands are used to compare a clean vanilla installation with the post-uninstall state.
+
+---
+
+## Step 1 — Remove Old Validation Files
+
+Run before creating a new validation session.
 
 ```powershell
 Remove-Item ".\baseline_vanilla.csv" -Force -ErrorAction SilentlyContinue
@@ -10,7 +16,11 @@ Remove-Item ".\after_install.csv" -Force -ErrorAction SilentlyContinue
 Remove-Item ".\after_uninstall.csv" -Force -ErrorAction SilentlyContinue
 ```
 
-## Create Vanilla Baseline
+---
+
+## Step 2 — Generate Baseline Hashes
+
+Run this on a clean, patched vanilla game before installing the modpack.
 
 ```powershell
 Get-ChildItem -Recurse -File |
@@ -22,14 +32,27 @@ Select-Object Path, Hash |
 Export-Csv ".\baseline_vanilla.csv" -NoTypeInformation
 ```
 
-## Verify Installer Output
+---
+
+## Step 3 — Verify Install Manifest Exists
+
+Confirm installer tracking was created.
 
 ```powershell
 Get-ChildItem ".\_LegacyInstaller" -Force
+```
+
+Preview first entries:
+
+```powershell
 Get-Content ".\_LegacyInstaller\install_manifest.txt" | Select-Object -First 20
 ```
 
-## Scan After Install
+---
+
+## Step 4 — Generate Post-Install Hashes
+
+Run after installation.
 
 ```powershell
 Get-ChildItem -Recurse -File |
@@ -41,13 +64,21 @@ Select-Object Path, Hash |
 Export-Csv ".\after_install.csv" -NoTypeInformation
 ```
 
-## Run Uninstaller
+---
+
+## Step 5 — Run Uninstaller
+
+Wait for completion.
 
 ```powershell
 Start-Process ".\_LegacyInstaller\unins000.exe" -Wait
 ```
 
-## Scan After Uninstall
+---
+
+## Step 6 — Generate Post-Uninstall Hashes
+
+Run after uninstall finishes.
 
 ```powershell
 Get-ChildItem -Recurse -File |
@@ -59,7 +90,11 @@ Select-Object Path, Hash |
 Export-Csv ".\after_uninstall.csv" -NoTypeInformation
 ```
 
-## Compare
+---
+
+## Step 7 — Compare Results
+
+Compare vanilla state with the restored state.
 
 ```powershell
 $baseline = Import-Csv ".\baseline_vanilla.csv"
@@ -71,4 +106,35 @@ Compare-Object `
 -Property Path, Hash
 ```
 
-Success means no output.
+---
+
+## Expected Result
+
+Successful rollback validation returns:
+
+```txt
+(no output)
+```
+
+No output means:
+
+* No missing files
+* No leftover modded files
+* No changed file hashes
+* Complete restoration
+
+---
+
+## Notes
+
+The following folders/files are excluded intentionally:
+
+```txt
+Backup/
+_LegacyInstaller/
+baseline_vanilla.csv
+after_install.csv
+after_uninstall.csv
+```
+
+These are installer-generated validation files and should not be included in rollback comparison.
