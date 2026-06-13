@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LegacyUI": {
+      "commandName": "Project",
+      "commandLineArgs": "--game nfsu --target \"C:\\Users\\Gabriel\\Desktop\\NFSU_Modpack\\Test\" --mode install"
+    }
+  }
+}
