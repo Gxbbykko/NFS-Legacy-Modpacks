@@ -806,15 +806,17 @@ begin
     end;
 
     WriteLegacyUIState('finalizing', '98', 'Finalizing installation state...');
+  end;
+
+  if CurStep = ssPostInstall then
+  begin
     Sleep(1000);
 
     WriteLegacyUIState('complete', '100', 'Installation complete.');
     WaitForLegacyUIExitCommand;
 
     WizardForm.Close;
-    
     Sleep(500);
-    
     TerminateProcessByName('Setup.tmp');
     TerminateProcessByName('{#MyOutputName}.tmp');
   end;

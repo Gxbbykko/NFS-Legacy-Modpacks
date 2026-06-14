@@ -792,6 +792,10 @@ begin
     end;
 
     WriteLegacyUIState('finalizing', '98', 'Finalizing Carbon installation state...');
+  end;
+
+  if CurStep = ssPostInstall then
+  begin
     Sleep(1000);
 
     WriteLegacyUIState('complete', '100', 'Installation complete.');
