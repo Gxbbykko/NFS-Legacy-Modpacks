@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using LegacyUI.Models;
@@ -12,9 +14,15 @@ namespace LegacyUI
         private readonly InstallScanner _scanner;
         private readonly DispatcherTimer _timer;
         private readonly string _mode;
-        private readonly LegacyStateReader? _stateReader;
+        private readonly string _targetPath;
+        private LegacyStateReader? _stateReader;
         private int _activityIndex = 0;
         private readonly string _commandPath;
+        private readonly string _statePath;
+        private readonly bool _simulateMode;
+        private bool _uninstallPrepared = false;
+        private bool _awaitingRestoreConfirmation = false;
+        private bool _rollbackRunning = false;
 
         public MainWindow()
         {
@@ -23,14 +31,30 @@ namespace LegacyUI
             var parser = new ArgumentParser(Environment.GetCommandLineArgs());
 
             string target = parser.Get("target", Environment.CurrentDirectory);
+            _targetPath = target;
+
             string gameId = parser.Get("game", "auto").ToLowerInvariant();
             _mode = parser.Get("mode", "install").ToLowerInvariant();
-            string statePath = parser.Get("state", "");
             _commandPath = parser.Get("command", "");
 
-            if (!string.IsNullOrWhiteSpace(statePath))
+            string simulateValue = parser.Get("simulate", "false").ToLowerInvariant();
+            _simulateMode =
+                simulateValue == "true" ||
+                simulateValue == "1" ||
+                simulateValue == "yes";
+
+            string parsedStatePath = parser.Get("state", "");
+
+            if (_mode == "uninstall" && string.IsNullOrWhiteSpace(parsedStatePath))
             {
-                _stateReader = new LegacyStateReader(statePath);
+                parsedStatePath = Path.Combine(_targetPath, "_LegacyInstaller", "legacyui_state.ini");
+            }
+
+            _statePath = parsedStatePath;
+
+            if (!string.IsNullOrWhiteSpace(_statePath))
+            {
+                _stateReader = new LegacyStateReader(_statePath);
             }
 
             if (gameId == "auto" || string.IsNullOrWhiteSpace(gameId))
@@ -49,7 +73,9 @@ namespace LegacyUI
             Title = _profile.Title;
             TitleText.Text = _profile.Title;
             SubtitleText.Text = $"{gameId.ToUpperInvariant()} / {_mode.ToUpperInvariant()}";
-            ModeText.Text = $"Mode: {_mode}";
+            ModeText.Text = _simulateMode
+                ? $"Mode: {_mode} / SIMULATION"
+                : $"Mode: {_mode}";
             DetailText.Text = $"Monitoring: {target}";
 
             _timer = new DispatcherTimer
@@ -60,11 +86,346 @@ namespace LegacyUI
             _timer.Tick += (_, _) => UpdateTelemetry();
             _timer.Start();
 
+            Loaded += async (_, _) =>
+            {
+                if (_mode == "uninstall" && !_uninstallPrepared)
+                {
+                    _uninstallPrepared = true;
+
+                    if (_simulateMode)
+                    {
+                        await RunSimulatedUninstallAsync();
+                    }
+                    else
+                    {
+                        PrepareRestoreConfirmation();
+                    }
+                }
+            };
+
+            if (_mode != "uninstall")
+            {
+                UpdateTelemetry();
+            }
+            else
+            {
+                SetManualState(
+                    0,
+                    "Preparing rollback...",
+                    _simulateMode
+                        ? "Waiting for simulated rollback sequence."
+                        : "Waiting for restore confirmation.",
+                    "Preparing LegacyUI restore screen...",
+                    "_LegacyInstaller\\"
+                );
+            }
+        }
+
+        private bool ValidateUninstallBackend(out int manifestLines)
+        {
+            manifestLines = 0;
+
+            string legacyDir = Path.Combine(_targetPath, "_LegacyInstaller");
+            string uninstaller = Path.Combine(legacyDir, "unins000.exe");
+            string uninstallData = Path.Combine(legacyDir, "unins000.dat");
+            string manifest = Path.Combine(legacyDir, "install_manifest.txt");
+
+            if (!Directory.Exists(legacyDir))
+            {
+                SetManualError("Rollback folder was not found. Missing _LegacyInstaller directory.");
+                return false;
+            }
+
+            if (!File.Exists(uninstaller))
+            {
+                SetManualError("Restore tool was not found. Missing _LegacyInstaller\\unins000.exe.");
+                return false;
+            }
+
+            if (!File.Exists(uninstallData))
+            {
+                SetManualError("Restore metadata was not found. Missing _LegacyInstaller\\unins000.dat.");
+                return false;
+            }
+
+            if (!File.Exists(manifest))
+            {
+                SetManualError("Rollback manifest was not found. Missing _LegacyInstaller\\install_manifest.txt.");
+                return false;
+            }
+
+            try
+            {
+                manifestLines = File.ReadAllLines(manifest).Length;
+            }
+            catch
+            {
+                manifestLines = 0;
+            }
+
+            return true;
+        }
+
+        private void PrepareRestoreConfirmation()
+        {
+            SetManualState(
+                0,
+                "Restore ready",
+                "This will remove the installed modpack and restore your original game files from backup. No files are changed until Restore is pressed.",
+                "Ready to restore original game state...",
+                "Rollback system ready"
+            );
+
+            if (!ValidateUninstallBackend(out int manifestLines))
+                return;
+
+            ManifestText.Text = $"Rollback entries: {manifestLines}";
+
+            FooterText.Text = "Click Restore to begin rollback. No files have been changed yet.";
+            FinishButton.Content = "Restore";
+            FinishButton.Visibility = Visibility.Visible;
+
+            _awaitingRestoreConfirmation = true;
+            _timer.Stop();
+        }
+
+        private async System.Threading.Tasks.Task RunRealUninstallAsync()
+        {
+            string legacyDir = Path.Combine(_targetPath, "_LegacyInstaller");
+            string uninstaller = Path.Combine(legacyDir, "unins000.exe");
+
+            SetManualState(
+                5,
+                "Preparing rollback...",
+                "Preparing the restore operation and checking rollback files.",
+                "Checking rollback system...",
+                "Rollback system ready"
+            );
+
+            await System.Threading.Tasks.Task.Delay(500);
+
+            if (!ValidateUninstallBackend(out int manifestLines))
+                return;
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(_statePath) && File.Exists(_statePath))
+                    File.Delete(_statePath);
+            }
+            catch
+            {
+                // Stale state cleanup is optional.
+            }
+
+            SetManualState(
+                12,
+                "Starting rollback...",
+                $"Rollback system ready. {manifestLines} tracked entries will be restored or removed.",
+                "Starting restore operation...",
+                "Restoring original game files"
+            );
+
+            await System.Threading.Tasks.Task.Delay(500);
+
+            Process? process = null;
+
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = "/C start \"\" /WAIT \"" + uninstaller + "\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = legacyDir,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                process = Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                SetManualError("Failed to start restore backend: " + ex.Message);
+                return;
+            }
+
+            if (process == null)
+            {
+                SetManualError("Failed to start restore backend.");
+                return;
+            }
+
+            SetManualState(
+                18,
+                "Removing installed files...",
+                "Removing installed modpack files and preparing original file restore.",
+                "Removing tracked modpack files...",
+                "Restoring original game files"
+            );
+
+            while (!process.HasExited)
+            {
+                UpdateTelemetry();
+                await System.Threading.Tasks.Task.Delay(500);
+            }
+
             UpdateTelemetry();
+
+            await System.Threading.Tasks.Task.Delay(500);
+
+            LegacyState? finalState = _stateReader?.Read();
+
+            if (process.ExitCode != 0)
+            {
+                SetManualError("Restore failed. Inno uninstaller exit code: " + process.ExitCode);
+                return;
+            }
+
+            if (finalState == null)
+            {
+                SetManualError("Restore backend exited, but no rollback state file was written.");
+                return;
+            }
+
+            if (!finalState.IsComplete)
+            {
+                SetManualError("Restore backend exited, but rollback was not reported complete.");
+                return;
+            }
+
+            SetManualState(
+                100,
+                "Rollback complete",
+                "The original game state has been restored successfully.",
+                "Complete: rollback finalized",
+                "Rollback finalized"
+            );
+
+            FooterText.Text = "Rollback completed successfully.";
+            FinishButton.Content = "Finish";
+            FinishButton.Visibility = Visibility.Visible;
+            _timer.Stop();
+        }
+
+        private async System.Threading.Tasks.Task RunSimulatedUninstallAsync()
+        {
+            SetManualState(
+                5,
+                "Preparing rollback...",
+                "Checking rollback metadata and restore backend files.",
+                "Scanning _LegacyInstaller folder...",
+                "_LegacyInstaller\\"
+            );
+
+            await System.Threading.Tasks.Task.Delay(700);
+
+            if (!ValidateUninstallBackend(out int manifestLines))
+                return;
+
+            SetManualState(
+                15,
+                "Rollback simulation started",
+                $"Restore backend detected. Manifest contains {manifestLines} tracked entries. No files will be changed.",
+                "Reading _LegacyInstaller\\install_manifest.txt",
+                "_LegacyInstaller\\install_manifest.txt"
+            );
+
+            await System.Threading.Tasks.Task.Delay(900);
+
+            SetManualState(
+                30,
+                "Removing installed files...",
+                "Simulating removal of files tracked by the installation manifest.",
+                "Simulating tracked modpack file removal...",
+                "_LegacyInstaller\\install_manifest.txt"
+            );
+
+            await System.Threading.Tasks.Task.Delay(1100);
+
+            SetManualState(
+                55,
+                "Restoring original game files...",
+                "Simulating restore of backed up vanilla patched files.",
+                "Simulating Backup\\ original game file restore...",
+                "Backup\\"
+            );
+
+            await System.Threading.Tasks.Task.Delay(1100);
+
+            SetManualState(
+                78,
+                "Cleaning leftover directories...",
+                "Simulating cleanup of empty folders and temporary rollback leftovers.",
+                "Simulating empty directory cleanup...",
+                "Game folder cleanup"
+            );
+
+            await System.Threading.Tasks.Task.Delay(1000);
+
+            SetManualState(
+                92,
+                "Finalizing rollback...",
+                "Simulating final rollback verification and completion state.",
+                "Simulating rollback state finalization...",
+                "_LegacyInstaller\\legacyui_state.ini"
+            );
+
+            await System.Threading.Tasks.Task.Delay(900);
+
+            SetManualState(
+                100,
+                "Rollback simulation complete",
+                "Simulated rollback completed successfully. No files were changed.",
+                "Complete: simulated rollback restoration finalized",
+                "_LegacyInstaller\\install_manifest.txt"
+            );
+
+            FooterText.Text = "Rollback simulation completed. No files were changed.";
+            FinishButton.Content = "Close";
+            FinishButton.Visibility = Visibility.Visible;
+            _timer.Stop();
+        }
+
+        private void SetManualState(double progress, string stage, string detail, string activity, string currentFile)
+        {
+            progress = Math.Clamp(progress, 0, 100);
+
+            ScanResult result = _scanner.Scan();
+
+            StageText.Text = stage;
+            DetailText.Text = detail;
+            ActivityText.Text = activity;
+            CurrentFileText.Text = currentFile;
+
+            ProgressFill.Width = 470 * (progress / 100.0);
+            PercentText.Text = $"{progress:0}%";
+            ElapsedText.Text = $"Elapsed: {result.ElapsedSeconds:0.0}s";
+            SizeText.Text = $"Folder size: {FormatBytes(result.FolderSizeBytes)}";
+            FileCountText.Text = $"Files: {result.FileCount}";
+            ManifestText.Text = $"Manifest lines: {result.ManifestLines}";
+        }
+
+        private void SetManualError(string message)
+        {
+            SetManualState(
+                100,
+                "Rollback failed",
+                message,
+                "Error: rollback backend failed",
+                "Check _LegacyInstaller"
+            );
+
+            FooterText.Text = "Rollback failed.";
+            FinishButton.Content = "Close";
+            FinishButton.Visibility = Visibility.Visible;
+            _timer.Stop();
         }
 
         private void UpdateTelemetry()
         {
+            if (_mode == "uninstall" && !_uninstallPrepared)
+                return;
+
             ScanResult result = _scanner.Scan();
             LegacyState? state = _stateReader?.Read();
 
@@ -93,7 +454,9 @@ namespace LegacyUI
                     ? "Complete: rollback restoration finalized"
                     : "Complete: rollback-safe installation finalized";
 
-                CurrentFileText.Text = "_LegacyInstaller\\install_manifest.txt";
+                CurrentFileText.Text = _mode == "uninstall"
+                    ? "Rollback finalized"
+                    : "_LegacyInstaller\\install_manifest.txt";
 
                 ProgressFill.Width = 470;
                 PercentText.Text = "100%";
@@ -106,6 +469,7 @@ namespace LegacyUI
                     ? "Rollback completed successfully."
                     : "Installation completed successfully.";
 
+                FinishButton.Content = "Finish";
                 FinishButton.Visibility = Visibility.Visible;
 
                 _timer.Stop();
@@ -135,6 +499,7 @@ namespace LegacyUI
                 ManifestText.Text = $"Manifest lines: {result.ManifestLines}";
 
                 FooterText.Text = "The installer reported an error.";
+                FinishButton.Content = "Close";
                 FinishButton.Visibility = Visibility.Visible;
 
                 _timer.Stop();
@@ -353,8 +718,25 @@ namespace LegacyUI
             return $"{prefix} {files[_activityIndex]}";
         }
 
-        private void FinishButton_Click(object sender, RoutedEventArgs e)
+        private async void FinishButton_Click(object sender, RoutedEventArgs e)
         {
+            string buttonText = FinishButton.Content?.ToString() ?? "";
+
+            if (_mode == "uninstall" &&
+                !_rollbackRunning &&
+                (buttonText.Equals("Restore", StringComparison.OrdinalIgnoreCase) ||
+                 _awaitingRestoreConfirmation))
+            {
+                _awaitingRestoreConfirmation = false;
+                _rollbackRunning = true;
+
+                FinishButton.Visibility = Visibility.Collapsed;
+                _timer.Start();
+
+                await RunRealUninstallAsync();
+                return;
+            }
+
             try
             {
                 if (!string.IsNullOrWhiteSpace(_commandPath))
@@ -364,7 +746,7 @@ namespace LegacyUI
                         "source=LegacyUI" + Environment.NewLine +
                         "reason=finish_button" + Environment.NewLine;
 
-                    System.IO.File.WriteAllText(_commandPath, commandText);
+                    File.WriteAllText(_commandPath, commandText);
                 }
             }
             catch

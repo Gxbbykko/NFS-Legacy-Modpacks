@@ -152,7 +152,7 @@ begin
     LogFile,
     'Underground Legacy Modpack installation error'#13#10 +
     'Timestamp: ' + GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':') + #13#10 +
-    'Selected game folder: ' + WizardDirValue() + #13#10 +
+    'Selected game folder: ' + ExpandConstant('{app}') + #13#10 +
     'Error: ' + ErrorText + #13#10,
     False
   );
@@ -238,7 +238,7 @@ var
   StateText: String;
   StateDir: String;
 begin
-  StateDir := AddBackslash(WizardDirValue()) + '_LegacyInstaller';
+  StateDir := AddBackslash(ExpandConstant('{app}')) + '_LegacyInstaller';
   ForceDirectories(StateDir);
 
   LegacyUIStatePath := AddBackslash(StateDir) + 'legacyui_state.ini';
@@ -649,12 +649,18 @@ begin
     LegacyDir := AddBackslash(GameDir) + '_LegacyInstaller';
     ManifestPath := AddBackslash(LegacyDir) + 'install_manifest.txt';
 
+    WriteLegacyUIState('removing', '25', 'Removing installed Underground Legacy Modpack files...');
     DeleteFilesFromManifest(GameDir, ManifestPath);
 
     if DirExists(BackupDir) then
     begin
+      WriteLegacyUIState('restoring', '60', 'Restoring original Underground game files...');
       RestoreBackupFiles(BackupDir, GameDir);
+
+      WriteLegacyUIState('cleaning', '85', 'Cleaning empty folders and rollback leftovers...');
       RemoveEmptyDirectories(GameDir);
+
+      WriteLegacyUIState('complete', '100', 'Rollback complete. Original game files restored.');
 
       MsgBox(
         'Backup files were restored successfully.'#13#10#13#10 +
@@ -665,6 +671,8 @@ begin
     end
     else
     begin
+      WriteLegacyUIState('error', '100', 'Backup folder was not found. Restore could not complete.');
+
       MsgBox(
         'Backup folder was not found.'#13#10#13#10 +
         'The uninstaller removed manifest files but could not restore original files.',
