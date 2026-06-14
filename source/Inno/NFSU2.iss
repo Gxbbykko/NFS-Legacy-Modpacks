@@ -35,12 +35,21 @@ Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\NFSU2.arc"; Fla
 Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\Splash.exe"; Flags: dontcopy
 Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Images\splash.png"; Flags: dontcopy
 Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\ArcRunner.exe"; Flags: dontcopy
+Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\LegacyUI.exe"; Flags: dontcopy
+Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\D3DCompiler_47_cor3.dll"; Flags: dontcopy
+Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\PenImc_cor3.dll"; Flags: dontcopy
+Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\PresentationNative_cor3.dll"; Flags: dontcopy
+Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\vcruntime140_cor3.dll"; Flags: dontcopy
+Source: "C:\Users\Gabriel\Desktop\NFSU2_Modpack\InstallerProject\Tools\wpfgfx_cor3.dll"; Flags: dontcopy
 
 [Code]
 
 var
   UserAcceptedUnsafeInstall: Boolean;
   ExtractLogMemo: TNewMemo;
+  LegacyUIResultCode: Integer;
+  LegacyUIStatePath: String;
+  LegacyUICommandPath: String;
 
 function GetDefaultDir(Param: String): String;
 begin
@@ -149,6 +158,101 @@ begin
   );
 end;
 
+procedure WriteLegacyUIState(Phase, Progress, Message: String);
+var
+  StateText: String;
+  StateDir: String;
+begin
+  StateDir := AddBackslash(WizardDirValue()) + '_LegacyInstaller';
+  ForceDirectories(StateDir);
+
+  LegacyUIStatePath := AddBackslash(StateDir) + 'legacyui_state.ini';
+
+  StateText :=
+    'phase=' + Phase + #13#10 +
+    'progress=' + Progress + #13#10 +
+    'message=' + Message + #13#10;
+
+  if FileExists(LegacyUIStatePath) then
+    DeleteFile(LegacyUIStatePath);
+
+  if not SaveStringToFile(LegacyUIStatePath, StateText, False) then
+    CreateErrorReport('Failed to write LegacyUI state file: ' + LegacyUIStatePath);
+end;
+
+procedure LaunchLegacyUI;
+var
+  Params: String;
+  LegacyDir: String;
+begin
+  ExtractTemporaryFile('LegacyUI.exe');
+  ExtractTemporaryFile('D3DCompiler_47_cor3.dll');
+  ExtractTemporaryFile('PenImc_cor3.dll');
+  ExtractTemporaryFile('PresentationNative_cor3.dll');
+  ExtractTemporaryFile('vcruntime140_cor3.dll');
+  ExtractTemporaryFile('wpfgfx_cor3.dll');
+
+  LegacyDir := AddBackslash(WizardDirValue()) + '_LegacyInstaller';
+  ForceDirectories(LegacyDir);
+
+  LegacyUIStatePath := AddBackslash(LegacyDir) + 'legacyui_state.ini';
+  LegacyUICommandPath := AddBackslash(LegacyDir) + 'legacyui_command.ini';
+
+  if FileExists(LegacyUICommandPath) then
+    DeleteFile(LegacyUICommandPath);
+
+  WriteLegacyUIState('preparing', '5', 'Preparing Underground 2 installation environment...');
+
+  Params :=
+    '--target "' + WizardDirValue() + '" ' +
+    '--mode install ' +
+    '--game nfsu2 ' +
+    '--state "' + LegacyUIStatePath + '" ' +
+    '--command "' + LegacyUICommandPath + '"';
+
+  Exec(
+    ExpandConstant('{tmp}\LegacyUI.exe'),
+    Params,
+    ExpandConstant('{tmp}'),
+    SW_SHOW,
+    ewNoWait,
+    LegacyUIResultCode
+  );
+end;
+
+procedure WaitForLegacyUIExitCommand;
+var
+  CommandText: AnsiString;
+begin
+  while True do
+  begin
+    Sleep(300);
+
+    if FileExists(LegacyUICommandPath) then
+    begin
+      if LoadStringFromFile(LegacyUICommandPath, CommandText) then
+      begin
+        if Pos('command=exit', String(CommandText)) > 0 then
+          Break;
+      end;
+    end;
+  end;
+end;
+
+procedure TerminateProcessByName(ProcessName: String);
+var
+  ResultCode: Integer;
+begin
+  Exec(
+    ExpandConstant('{cmd}'),
+    '/C taskkill /F /IM "' + ProcessName + '"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
 procedure CreateExtractLogBox;
 begin
   ExtractLogMemo := TNewMemo.Create(WizardForm);
@@ -220,8 +324,12 @@ var
   DisplayText: String;
   ExtractedSize: Int64;
   ProgressPercent: Integer;
+  LegacyProgress: Integer;
 begin
   Result := False;
+
+  LogText := '';
+  WriteLegacyUIState('extracting', '10', 'Extracting Underground 2 archive payload...');
 
   ExtractTemporaryFile('arc.exe');
   ExtractTemporaryFile('ArcRunner.exe');
@@ -252,9 +360,10 @@ begin
   WizardForm.StatusLabel.Caption := 'Installing Underground 2 Legacy Modpack...';
   WizardForm.FilenameLabel.Caption := 'Extracting archive silently. Please wait...';
   WizardForm.Refresh;
-  
+
   if not Exec(ArcRunnerExe, Params, '', SW_HIDE, ewNoWait, ResultCode) then
   begin
+    WriteLegacyUIState('error', '100', 'Failed to launch archive extraction helper.');
     CreateErrorReport('Failed to launch ArcRunner.exe.');
     Exit;
   end;
@@ -267,6 +376,17 @@ begin
 
     if ProgressPercent > 99 then
       ProgressPercent := 99;
+
+    LegacyProgress := 10 + ((ProgressPercent * 55) div 100);
+
+    if LegacyProgress > 65 then
+      LegacyProgress := 65;
+
+    WriteLegacyUIState(
+      'extracting',
+      IntToStr(LegacyProgress),
+      'Extracting Underground 2 archive payload...'
+    );
 
     WizardForm.ProgressGauge.Position := ProgressPercent;
     WizardForm.StatusLabel.Caption := 'Installing Underground 2 Legacy Modpack...';
@@ -297,10 +417,14 @@ begin
   WizardForm.StatusLabel.Caption := 'Extraction completed successfully.';
   WizardForm.FilenameLabel.Caption := 'Preparing files for installation...';
   WizardForm.Refresh;
+
+  WriteLegacyUIState('extracting', '66', 'Archive extraction completed successfully.');
   Sleep(700);
 
-  if (Pos('arc.exe exit code: 0', String(LogText)) = 0) and (Pos('All OK', String(LogText)) = 0) then
+  if (Pos('arc.exe exit code: 0', String(LogText)) = 0) and
+     (Pos('All OK', String(LogText)) = 0) then
   begin
+    WriteLegacyUIState('error', '100', 'Archive extraction failed.');
     CreateErrorReport('ArcRunner / FreeArc extraction failed. See arc_progress.log.');
     Exit;
   end;
@@ -416,6 +540,7 @@ begin
   WizardForm.StatusLabel.Caption := 'Installing modpack files...';
   WizardForm.FilenameLabel.Caption := 'Copying extracted files into the game folder';
 
+  WriteLegacyUIState('copying', '70', 'Copying extracted files into the Underground 2 folder...');
   Result := CopyDirectoryRecursive(TempExtractPath, WizardDirValue(), TempExtractPath, ManifestPath);
 end;
 
@@ -645,8 +770,13 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssInstall then
   begin
+    LaunchLegacyUI;
+    WizardForm.Hide;
+
     if not ExtractArchiveToTemp() then
     begin
+      WriteLegacyUIState('error', '100', 'Archive extraction failed.');
+
       MsgBox(
         'Archive extraction failed.'#13#10#13#10 +
         'The game folder was not modified.'#13#10 +
@@ -654,11 +784,14 @@ begin
         mbError,
         MB_OK
       );
+
       RaiseException('Extraction failed.');
     end;
 
     if not CopyExtractedFilesToGame() then
     begin
+      WriteLegacyUIState('error', '100', 'File copy failed.');
+
       MsgBox(
         'File copy failed.'#13#10#13#10 +
         'Some files may not have been installed.'#13#10 +
@@ -666,7 +799,19 @@ begin
         mbError,
         MB_OK
       );
+
       RaiseException('Copy failed.');
     end;
+
+    WriteLegacyUIState('finalizing', '98', 'Finalizing Underground 2 installation state...');
+    Sleep(1000);
+
+    WriteLegacyUIState('complete', '100', 'Installation complete.');
+    WaitForLegacyUIExitCommand;
+
+    WizardForm.Close;
+    Sleep(500);
+    TerminateProcessByName('Setup.tmp');
+    TerminateProcessByName('{#MyOutputName}.tmp');
   end;
 end;
