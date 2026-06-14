@@ -12,7 +12,9 @@ namespace LegacyUI
         private readonly InstallScanner _scanner;
         private readonly DispatcherTimer _timer;
         private readonly string _mode;
+        private readonly LegacyStateReader? _stateReader;
         private int _activityIndex = 0;
+        private readonly string _commandPath;
 
         public MainWindow()
         {
@@ -23,6 +25,13 @@ namespace LegacyUI
             string target = parser.Get("target", Environment.CurrentDirectory);
             string gameId = parser.Get("game", "auto").ToLowerInvariant();
             _mode = parser.Get("mode", "install").ToLowerInvariant();
+            string statePath = parser.Get("state", "");
+            _commandPath = parser.Get("command", "");
+
+            if (!string.IsNullOrWhiteSpace(statePath))
+            {
+                _stateReader = new LegacyStateReader(statePath);
+            }
 
             if (gameId == "auto" || string.IsNullOrWhiteSpace(gameId))
             {
@@ -57,8 +66,91 @@ namespace LegacyUI
         private void UpdateTelemetry()
         {
             ScanResult result = _scanner.Scan();
+            LegacyState? state = _stateReader?.Read();
 
-            double progress = result.ProgressPercent;
+            double scannerProgress = result.ProgressPercent;
+            double stateProgress = state?.Progress ?? -1;
+
+            double progress = stateProgress >= 0
+                ? stateProgress
+                : scannerProgress;
+
+            progress = Math.Clamp(progress, 0, 100);
+
+            if (state != null && state.IsComplete)
+            {
+                progress = 100;
+
+                StageText.Text = _mode == "uninstall"
+                    ? "Rollback complete"
+                    : "Installation complete";
+
+                DetailText.Text = _mode == "uninstall"
+                    ? "The original game state has been restored successfully."
+                    : "The installer engine has finished successfully.";
+
+                ActivityText.Text = _mode == "uninstall"
+                    ? "Complete: rollback restoration finalized"
+                    : "Complete: rollback-safe installation finalized";
+
+                CurrentFileText.Text = "_LegacyInstaller\\install_manifest.txt";
+
+                ProgressFill.Width = 470;
+                PercentText.Text = "100%";
+                ElapsedText.Text = $"Elapsed: {result.ElapsedSeconds:0.0}s";
+                SizeText.Text = $"Folder size: {FormatBytes(result.FolderSizeBytes)}";
+                FileCountText.Text = $"Files: {result.FileCount}";
+                ManifestText.Text = $"Manifest lines: {result.ManifestLines}";
+
+                FooterText.Text = _mode == "uninstall"
+                    ? "Rollback completed successfully."
+                    : "Installation completed successfully.";
+
+                FinishButton.Visibility = Visibility.Visible;
+
+                _timer.Stop();
+                return;
+            }
+
+            if (state != null && state.IsError)
+            {
+                progress = 100;
+
+                StageText.Text = _mode == "uninstall"
+                    ? "Rollback failed"
+                    : "Installation failed";
+
+                DetailText.Text = string.IsNullOrWhiteSpace(state.Message)
+                    ? "The installer reported an error."
+                    : state.Message;
+
+                ActivityText.Text = "Error: install engine stopped";
+                CurrentFileText.Text = "Check installer error report";
+
+                ProgressFill.Width = 470;
+                PercentText.Text = "100%";
+                ElapsedText.Text = $"Elapsed: {result.ElapsedSeconds:0.0}s";
+                SizeText.Text = $"Folder size: {FormatBytes(result.FolderSizeBytes)}";
+                FileCountText.Text = $"Files: {result.FileCount}";
+                ManifestText.Text = $"Manifest lines: {result.ManifestLines}";
+
+                FooterText.Text = "The installer reported an error.";
+                FinishButton.Visibility = Visibility.Visible;
+
+                _timer.Stop();
+                return;
+            }
+
+            StageText.Text = GetStageText(progress);
+
+            if (state != null && !string.IsNullOrWhiteSpace(state.Message))
+                DetailText.Text = state.Message;
+            else
+                DetailText.Text = GetDetailText(progress);
+
+            ActivityText.Text = GetActivityText(progress);
+            CurrentFileText.Text = GetCurrentFileText(progress);
+
             double maxWidth = 470;
             ProgressFill.Width = maxWidth * (progress / 100.0);
 
@@ -67,11 +159,6 @@ namespace LegacyUI
             SizeText.Text = $"Folder size: {FormatBytes(result.FolderSizeBytes)}";
             FileCountText.Text = $"Files: {result.FileCount}";
             ManifestText.Text = $"Manifest lines: {result.ManifestLines}";
-
-            StageText.Text = GetStageText(progress);
-            DetailText.Text = GetDetailText(progress);
-            ActivityText.Text = GetActivityText(progress);
-            CurrentFileText.Text = GetCurrentFileText(progress);
         }
 
         private string GetStageText(double progress)
@@ -144,118 +231,118 @@ namespace LegacyUI
             {
                 files = new[]
                 {
-            @"_LegacyInstaller\install_manifest.txt",
-            @"Backup\GLOBAL\GlobalB.lzc",
-            @"Backup\GLOBAL\InGameB.lzc",
-            @"Backup\FRONTEND\FrontB.lzc",
-            @"Backup\LANGUAGES\LANGUAGE_ENGLISH.bin",
-            @"Backup\CARS\vehicle assets",
-            @"Backup\TRACKS\track resources",
-            @"Cleaning empty directories",
-            @"Finalizing rollback state"
-        };
+                    @"_LegacyInstaller\install_manifest.txt",
+                    @"Backup\GLOBAL\GlobalB.lzc",
+                    @"Backup\GLOBAL\InGameB.lzc",
+                    @"Backup\FRONTEND\FrontB.lzc",
+                    @"Backup\LANGUAGES\LANGUAGE_ENGLISH.bin",
+                    @"Backup\CARS\vehicle assets",
+                    @"Backup\TRACKS\track resources",
+                    @"Cleaning empty directories",
+                    @"Finalizing rollback state"
+                };
             }
             else if (progress < 10)
             {
                 prefix = "Preparing:";
                 files = new[]
                 {
-            @"temporary extraction workspace",
-            @"installer runtime files",
-            @"destination directory scan",
-            @"rollback environment",
-            @"game profile telemetry"
-        };
+                    @"temporary extraction workspace",
+                    @"installer runtime files",
+                    @"destination directory scan",
+                    @"rollback environment",
+                    @"game profile telemetry"
+                };
             }
             else if (progress < 25)
             {
                 prefix = "Validating:";
                 files = new[]
                 {
-            @"game executable",
-            @"required folder structure",
-            @"Large Address Aware state",
-            @"patched game files",
-            @"installation directory"
-        };
+                    @"game executable",
+                    @"required folder structure",
+                    @"Large Address Aware state",
+                    @"patched game files",
+                    @"installation directory"
+                };
             }
             else if (progress < 40)
             {
                 files = new[]
                 {
-            @"CARS\240SX\GEOMETRY.BIN",
-            @"CARS\240SX\TEXTURES.BIN",
-            @"CARS\350Z\GEOMETRY.BIN",
-            @"CARS\350Z\TEXTURES.BIN",
-            @"CARS\RX7\GEOMETRY.BIN",
-            @"CARS\RX7\TEXTURES.BIN",
-            @"CARS\SKYLINE\GEOMETRY.BIN",
-            @"CARS\SKYLINE\TEXTURES.BIN",
-            @"CARS\SUPRA\GEOMETRY.BIN",
-            @"CARS\SUPRA\TEXTURES.BIN"
-        };
+                    @"CARS\240SX\GEOMETRY.BIN",
+                    @"CARS\240SX\TEXTURES.BIN",
+                    @"CARS\350Z\GEOMETRY.BIN",
+                    @"CARS\350Z\TEXTURES.BIN",
+                    @"CARS\RX7\GEOMETRY.BIN",
+                    @"CARS\RX7\TEXTURES.BIN",
+                    @"CARS\SKYLINE\GEOMETRY.BIN",
+                    @"CARS\SKYLINE\TEXTURES.BIN",
+                    @"CARS\SUPRA\GEOMETRY.BIN",
+                    @"CARS\SUPRA\TEXTURES.BIN"
+                };
             }
             else if (progress < 55)
             {
                 files = new[]
                 {
-            @"FRONTEND\FrontB.lzc",
-            @"FRONTEND\FrontEndTextures.bin",
-            @"FRONTEND\HUD resources",
-            @"FRONTEND\menu assets",
-            @"FRONTEND\interface packages",
-            @"FRONTEND\loading screen data"
-        };
+                    @"FRONTEND\FrontB.lzc",
+                    @"FRONTEND\FrontEndTextures.bin",
+                    @"FRONTEND\HUD resources",
+                    @"FRONTEND\menu assets",
+                    @"FRONTEND\interface packages",
+                    @"FRONTEND\loading screen data"
+                };
             }
             else if (progress < 70)
             {
                 files = new[]
                 {
-            @"GLOBAL\GlobalB.lzc",
-            @"GLOBAL\InGameB.lzc",
-            @"GLOBAL\GLOBALB.BUN",
-            @"GLOBAL\Attributes.bin",
-            @"GLOBAL\gameplay.bin",
-            @"GLOBAL\visual treatment data",
-            @"GLOBAL\shared texture packages"
-        };
+                    @"GLOBAL\GlobalB.lzc",
+                    @"GLOBAL\InGameB.lzc",
+                    @"GLOBAL\GLOBALB.BUN",
+                    @"GLOBAL\Attributes.bin",
+                    @"GLOBAL\gameplay.bin",
+                    @"GLOBAL\visual treatment data",
+                    @"GLOBAL\shared texture packages"
+                };
             }
             else if (progress < 85)
             {
                 files = new[]
                 {
-            @"LANGUAGES\LANGUAGE_ENGLISH.bin",
-            @"TRACKS\STREAML2RA.BUN",
-            @"TRACKS\TRACKS.BIN",
-            @"SOUND\Speech.big",
-            @"MOVIES\BootFlow.mad",
-            @"MOVIES\frontend sequences",
-            @"TRACKS\world streaming data"
-        };
+                    @"LANGUAGES\LANGUAGE_ENGLISH.bin",
+                    @"TRACKS\STREAML2RA.BUN",
+                    @"TRACKS\TRACKS.BIN",
+                    @"SOUND\Speech.big",
+                    @"MOVIES\BootFlow.mad",
+                    @"MOVIES\frontend sequences",
+                    @"TRACKS\world streaming data"
+                };
             }
             else if (progress < 95)
             {
                 prefix = "Writing:";
                 files = new[]
                 {
-            @"_LegacyInstaller\install_manifest.txt",
-            @"_LegacyInstaller\rollback metadata",
-            @"_LegacyInstaller\uninstall data",
-            @"Backup\original file map",
-            @"restore validation entries"
-        };
+                    @"_LegacyInstaller\install_manifest.txt",
+                    @"_LegacyInstaller\rollback metadata",
+                    @"_LegacyInstaller\uninstall data",
+                    @"Backup\original file map",
+                    @"restore validation entries"
+                };
             }
             else
             {
                 prefix = "Finalizing:";
                 files = new[]
                 {
-            @"temporary extraction cleanup",
-            @"installer state verification",
-            @"rollback system verification",
-            @"directory cleanup",
-            @"installation completion state"
-        };
+                    @"temporary extraction cleanup",
+                    @"installer state verification",
+                    @"rollback system verification",
+                    @"directory cleanup",
+                    @"installation completion state"
+                };
             }
 
             _activityIndex++;
@@ -264,6 +351,28 @@ namespace LegacyUI
                 _activityIndex = 0;
 
             return $"{prefix} {files[_activityIndex]}";
+        }
+
+        private void FinishButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(_commandPath))
+                {
+                    string commandText =
+                        "command=exit" + Environment.NewLine +
+                        "source=LegacyUI" + Environment.NewLine +
+                        "reason=finish_button" + Environment.NewLine;
+
+                    System.IO.File.WriteAllText(_commandPath, commandText);
+                }
+            }
+            catch
+            {
+                // If command writing fails, still close the UI.
+            }
+
+            Close();
         }
 
         private static string FormatBytes(long bytes)
