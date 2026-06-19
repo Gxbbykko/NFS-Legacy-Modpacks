@@ -78,7 +78,7 @@ namespace LegacyUI.Services
                 return "nfsuc";
 
             // fallback
-            return "nfsu";
+            return "auto";
         }
     }
 }

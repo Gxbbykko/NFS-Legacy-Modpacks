@@ -11,6 +11,9 @@ Debug/
 bin/
 obj/
 
+**/bin/
+**/obj/
+
 # =========================================================
 # Installers / binaries
 # =========================================================
@@ -19,18 +22,32 @@ obj/
 *.msi
 *.dll
 *.pdb
-
-# Keep source launchers if needed later
-#!source/**/bin/Release/**
+*.app
+*.appx
+*.msix
 
 # =========================================================
-# Archives
+# Archives / payloads
 # =========================================================
 
 *.arc
 *.zip
 *.7z
 *.rar
+*.tar
+*.gz
+
+# =========================================================
+# Large/generated installer payload folders
+# =========================================================
+
+source/SetupLauncher/Backend/
+source/SetupLauncher/bin/
+source/SetupLauncher/obj/
+
+InstallerProject/
+_backend/
+_DEBUG_RUN/
 
 # =========================================================
 # Temporary extraction / installer leftovers
@@ -42,6 +59,7 @@ Backup/
 
 arc_progress.log
 install_error.txt
+LegacyUI_crash.log
 
 # =========================================================
 # Validation / testing files
@@ -50,8 +68,11 @@ install_error.txt
 baseline_vanilla.csv
 after_install.csv
 after_uninstall.csv
-
 telemetry_*.csv
+
+Test/
+TestBackup/
+TestEmpty/
 
 *.tmp
 *.bak
@@ -75,8 +96,6 @@ Desktop.ini
 *.suo
 *.user
 *.cache
-
-# Visual Studio
 *.userosscache
 *.sln.docstates
 
@@ -88,14 +107,14 @@ packages/
 *.nupkg
 
 # =========================================================
-# Python cache (future-proofing)
+# Python cache
 # =========================================================
 
 __pycache__/
 *.pyc
 
 # =========================================================
-# Game generated configs
+# Game generated configs / logs
 # =========================================================
 
 nextgenfx_settings.ini
@@ -105,8 +124,7 @@ reshade.ini
 *.log
 
 # =========================================================
-# Local-only assets (optional)
-# Keep commented if you WANT these in repo
+# Local-only assets
 # =========================================================
 
 # Tools/

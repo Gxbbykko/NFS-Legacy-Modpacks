@@ -8,10 +8,21 @@
         ResizeMode="NoResize"
         Background="#101014">
 
-    <Grid>
-        <Border Margin="24"
+    <Grid x:Name="RootGrid" Background="#101014">
+
+        <Image x:Name="BackgroundImage"
+               Stretch="UniformToFill"
+               Opacity="0.75"
+               IsHitTestVisible="False"/>
+
+        <Rectangle x:Name="BackgroundOverlay"
+                   Fill="#33000000"
+                   IsHitTestVisible="False"/>
+
+        <Border x:Name="MainPanel"
+                Margin="24"
                 CornerRadius="18"
-                Background="#181820"
+                Background="#CC181820"
                 BorderBrush="#2E2E3A"
                 BorderThickness="1">
 
@@ -56,27 +67,66 @@
                                    FontSize="15"
                                    TextWrapping="Wrap"
                                    Width="470"
-                                   Margin="0,0,0,28"/>
+                                   Margin="0,0,0,22"/>
+
+                        <StackPanel x:Name="PathPanel"
+                                    Visibility="Collapsed"
+                                    Width="470"
+                                    Margin="0,0,0,22">
+
+                            <TextBlock x:Name="GameFolderLabel"
+                                       Text="Game folder"
+                                       Foreground="#DADAEA"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="110"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox x:Name="SelectedPathTextBox"
+                                         Grid.Column="0"
+                                         Height="36"
+                                         Background="#101014"
+                                         Foreground="White"
+                                         BorderBrush="#3A3A48"
+                                         BorderThickness="1"
+                                         Padding="10,7"
+                                         FontSize="13"
+                                         VerticalContentAlignment="Center"/>
+
+                                <Button x:Name="BrowseButton"
+                                        Grid.Column="1"
+                                        Content="Browse..."
+                                        Height="36"
+                                        Margin="10,0,0,0"
+                                        Click="BrowseButton_Click"/>
+                            </Grid>
+                        </StackPanel>
 
                         <TextBlock x:Name="ActivityText"
-                        Text="Preparing file operations..."
-                        Foreground="#7FCBFF"
-                        FontSize="14"
-                        FontFamily="Consolas"
-                        TextWrapping="Wrap"
-                        Width="470"
-                        Margin="0,0,0,22"/>
+                                   Text="Preparing file operations..."
+                                   Foreground="#7FCBFF"
+                                   FontSize="14"
+                                   FontFamily="Consolas"
+                                   TextWrapping="Wrap"
+                                   Width="470"
+                                   Margin="0,0,0,22"/>
 
                         <TextBlock x:Name="CurrentFileText"
-                        Text="Waiting for file activity..."
-                        Foreground="#9A9AB0"
-                        FontSize="13"
-                        FontFamily="Consolas"
-                        TextWrapping="Wrap"
-                        Width="470"
-                            Margin="0,0,0,22"/>
+                                   Text="Waiting for file activity..."
+                                   Foreground="#9A9AB0"
+                                   FontSize="13"
+                                   FontFamily="Consolas"
+                                   TextWrapping="Wrap"
+                                   Width="470"
+                                   Margin="0,0,0,22"/>
 
-                        <Border Height="22"
+                        <Border x:Name="ProgressTrack"
+                                Height="22"
                                 Width="470"
                                 CornerRadius="9"
                                 Background="#2A2A34"
@@ -97,15 +147,17 @@
                                    Margin="0,10,0,0"/>
                     </StackPanel>
 
-                    <Border Grid.Column="1"
+                    <Border x:Name="TelemetryPanel"
+                            Grid.Column="1"
                             CornerRadius="14"
-                            Background="#111118"
+                            Background="#CC111118"
                             BorderBrush="#2E2E3A"
                             BorderThickness="1"
                             Padding="22">
 
                         <StackPanel>
-                            <TextBlock Text="Telemetry"
+                            <TextBlock x:Name="TelemetryTitle"
+                                       Text="Telemetry"
                                        Foreground="White"
                                        FontSize="18"
                                        FontWeight="SemiBold"
@@ -138,25 +190,47 @@
                             <TextBlock x:Name="ManifestText"
                                        Text="Manifest lines: 0"
                                        Foreground="#B9B9C8"
-                                       FontSize="14"/>
+                                       FontSize="14"
+                                       TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
                 </Grid>
 
                 <Grid Grid.Row="2">
                     <TextBlock x:Name="FooterText"
-               Text="Installer engine is running in the background. Do not close this window."
-               Foreground="#77778A"
-               FontSize="13"
-               VerticalAlignment="Center"/>
+                               Text="Installer engine is running in the background. Do not close this window."
+                               Foreground="#77778A"
+                               FontSize="13"
+                               VerticalAlignment="Center"
+                               Width="620"
+                               TextWrapping="Wrap"/>
 
-                    <Button x:Name="FinishButton"
-            Content="Finish"
-            Width="120"
-            Height="38"
-            HorizontalAlignment="Right"
-            Visibility="Collapsed"
-            Click="FinishButton_Click"/>
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right">
+
+                        <Button x:Name="CancelButton"
+                                Content="Cancel"
+                                Width="100"
+                                Height="38"
+                                Margin="0,0,12,0"
+                                Visibility="Collapsed"
+                                Click="CancelButton_Click"/>
+
+                        <Button x:Name="BackButton"
+                                Content="Back"
+                                Width="100"
+                                Height="38"
+                                Margin="0,0,12,0"
+                                Visibility="Collapsed"
+                                Click="BackButton_Click"/>
+
+                        <Button x:Name="FinishButton"
+                                Content="Finish"
+                                Width="120"
+                                Height="38"
+                                Visibility="Collapsed"
+                                Click="FinishButton_Click"/>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Border>

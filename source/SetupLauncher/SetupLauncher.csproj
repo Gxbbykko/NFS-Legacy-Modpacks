@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+
+		<ApplicationIcon Condition="'$(LauncherTitle)' == 'NFSU'">Assets\NFSU.ico</ApplicationIcon>
+		<ApplicationIcon Condition="'$(LauncherTitle)' == 'NFSU2'">Assets\NFSU2.ico</ApplicationIcon>
+		<ApplicationIcon Condition="'$(LauncherTitle)' == 'NFSMW'">Assets\NFSMW.ico</ApplicationIcon>
+		<ApplicationIcon Condition="'$(LauncherTitle)' == 'NFSC'">Assets\NFSC.ico</ApplicationIcon>
+		<ApplicationIcon Condition="'$(LauncherTitle)' == 'NFSPS'">Assets\NFSPS.ico</ApplicationIcon>
+		<ApplicationIcon Condition="'$(LauncherTitle)' == 'NFSUC'">Assets\NFSUC.ico</ApplicationIcon>
+
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>true</SelfContained>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="setup_launcher.ini" />
+	</ItemGroup>
+
+</Project>

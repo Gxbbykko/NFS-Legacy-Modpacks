@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using LegacyUI.Models;
 using LegacyUI.Services;
@@ -10,11 +12,47 @@ namespace LegacyUI
 {
     public partial class MainWindow : Window
     {
+        private enum InstallFrontendPage
+        {
+            Welcome,
+            ChooseFolder,
+            Validation,
+            ReadyToInstall,
+            Installing
+        }
+
+        private sealed class UiTheme
+        {
+            public string Accent { get; }
+            public string AccentSoft { get; }
+            public string Background { get; }
+            public string Panel { get; }
+            public string PanelAlt { get; }
+            public string Border { get; }
+
+            public UiTheme(
+                string accent,
+                string accentSoft,
+                string background,
+                string panel,
+                string panelAlt,
+                string border)
+            {
+                Accent = accent;
+                AccentSoft = accentSoft;
+                Background = background;
+                Panel = panel;
+                PanelAlt = panelAlt;
+                Border = border;
+            }
+        }
+
         private readonly GameProfile _profile;
         private readonly InstallScanner _scanner;
         private readonly DispatcherTimer _timer;
         private readonly string _mode;
         private readonly string _targetPath;
+        private readonly string _gameId;
         private LegacyStateReader? _stateReader;
         private int _activityIndex = 0;
         private readonly string _commandPath;
@@ -24,6 +62,11 @@ namespace LegacyUI
         private bool _awaitingRestoreConfirmation = false;
         private bool _rollbackRunning = false;
 
+        private InstallFrontendPage _installPage = InstallFrontendPage.Welcome;
+        private bool _installCommandSent = false;
+        private bool _allowUnsafeInstall = false;
+        private string _selectedInstallPath = "";
+
         public MainWindow()
         {
             InitializeComponent();
@@ -32,6 +75,7 @@ namespace LegacyUI
 
             string target = parser.Get("target", Environment.CurrentDirectory);
             _targetPath = target;
+            _selectedInstallPath = target;
 
             string gameId = parser.Get("game", "auto").ToLowerInvariant();
             _mode = parser.Get("mode", "install").ToLowerInvariant();
@@ -68,15 +112,22 @@ namespace LegacyUI
                 gameId = "nfsu";
             }
 
+            _gameId = gameId;
+
+            ApplyGameTheme(_gameId);
+
             _scanner = new InstallScanner(_profile, target, _mode);
 
             Title = _profile.Title;
             TitleText.Text = _profile.Title;
-            SubtitleText.Text = $"{gameId.ToUpperInvariant()} / {_mode.ToUpperInvariant()}";
+            SubtitleText.Text = $"{_gameId.ToUpperInvariant()} / {_mode.ToUpperInvariant()}";
             ModeText.Text = _simulateMode
                 ? $"Mode: {_mode} / SIMULATION"
                 : $"Mode: {_mode}";
             DetailText.Text = $"Monitoring: {target}";
+
+            if (SelectedPathTextBox != null)
+                SelectedPathTextBox.Text = _selectedInstallPath;
 
             _timer = new DispatcherTimer
             {
@@ -85,6 +136,8 @@ namespace LegacyUI
 
             _timer.Tick += (_, _) => UpdateTelemetry();
             _timer.Start();
+
+            Closing += MainWindow_Closing;
 
             Loaded += async (_, _) =>
             {
@@ -103,9 +156,10 @@ namespace LegacyUI
                 }
             };
 
-            if (_mode != "uninstall")
+            if (_mode == "install")
             {
-                UpdateTelemetry();
+                _timer.Stop();
+                ShowWelcomePage();
             }
             else
             {
@@ -118,6 +172,526 @@ namespace LegacyUI
                     "Preparing LegacyUI restore screen...",
                     "_LegacyInstaller\\"
                 );
+            }
+        }
+
+        private void ApplyGameIcon(string gameId)
+        {
+            try
+            {
+                string iconFile = gameId switch
+                {
+                    "nfsu" => "NFSU.ico",
+                    "nfsu2" => "NFSU2.ico",
+                    "nfsmw" => "NFSMW.ico",
+                    "nfsc" => "NFSC.ico",
+                    "nfsps" => "NFSPS.ico",
+                    "nfsuc" => "NFSUC.ico",
+                    _ => "NFSU.ico"
+                };
+
+                Icon = BitmapFrame.Create(
+                    new Uri(
+                        $"pack://application:,,,/Assets/Icons/{iconFile}",
+                        UriKind.Absolute
+                    )
+                );
+            }
+            catch
+            {
+                Icon = null;
+            }
+        }
+
+        private void ApplyGameTheme(string gameId)
+        {
+            UiTheme theme = gameId switch
+            {
+                // NFS Underground (2003) → Blue
+                "nfsu" => new UiTheme(
+                    "#3FA7FF",
+                    "#7FCBFF",
+                    "#07111F",
+                    "#101A28",
+                    "#08121D",
+                    "#2E5F8F"
+                ),
+
+                // NFS Underground 2 → Green
+                "nfsu2" => new UiTheme(
+                    "#39FF88",
+                    "#8DFFB8",
+                    "#07150D",
+                    "#101F16",
+                    "#08150D",
+                    "#2E8F55"
+                ),
+
+                // NFS Most Wanted → Brown / Sepia
+                "nfsmw" => new UiTheme(
+                    "#B9894A",
+                    "#E0B46D",
+                    "#15100A",
+                    "#21180F",
+                    "#140F09",
+                    "#8F6A35"
+                ),
+
+                // NFS Carbon → Canyon / Redux Blue
+                "nfsc" => new UiTheme(
+                    "#4FA7FF",
+                    "#8ECCFF",
+                    "#07101A",
+                    "#101A25",
+                    "#08111B",
+                    "#2E6F9F"
+                ),
+
+                // NFS ProStreet → Toxic Green
+                "nfsps" => new UiTheme(
+                    "#7CFF4F",
+                    "#B0FF8E",
+                    "#0B1408",
+                    "#162110",
+                    "#0D1508",
+                    "#4F8F2E"
+                ),
+
+                // NFS Undercover → Orange / Amber
+                "nfsuc" => new UiTheme(
+                    "#FF9A32",
+                    "#FFC06F",
+                    "#160D06",
+                    "#24170D",
+                    "#140C06",
+                    "#9F632E"
+                ),
+
+                _ => new UiTheme(
+                    "#3FA7FF",
+                    "#7FCBFF",
+                    "#101014",
+                    "#181820",
+                    "#111118",
+                    "#2E2E3A"
+                )
+            };
+
+            RootGrid.Background = BrushFromHex(theme.Background);
+
+            ApplyGameBackground(gameId);
+            ApplyGameIcon(gameId);
+
+            MainPanel.Background = BrushFromHexWithOpacity(theme.Panel, 0.55);
+            MainPanel.BorderBrush = BrushFromHex(theme.Border);
+
+            TelemetryPanel.Background = BrushFromHexWithOpacity(theme.PanelAlt, 0.50);
+            TelemetryPanel.BorderBrush = BrushFromHex(theme.Border);
+
+            ProgressTrack.Background = BrushFromHex(theme.PanelAlt);
+            ProgressFill.Background = BrushFromHex(theme.Accent);
+
+            ActivityText.Foreground = BrushFromHex(theme.AccentSoft);
+            TelemetryTitle.Foreground = BrushFromHex(theme.AccentSoft);
+            GameFolderLabel.Foreground = BrushFromHex(theme.AccentSoft);
+
+            SelectedPathTextBox.BorderBrush = BrushFromHex(theme.Border);
+
+            BrowseButton.BorderBrush = BrushFromHex(theme.Border);
+            BackButton.BorderBrush = BrushFromHex(theme.Border);
+            FinishButton.BorderBrush = BrushFromHex(theme.Border);
+        }
+
+        private static SolidColorBrush BrushFromHexWithOpacity(string hex, double opacity)
+        {
+            Color color = (Color)ColorConverter.ConvertFromString(hex);
+            color.A = (byte)Math.Clamp(opacity * 255, 0, 255);
+            return new SolidColorBrush(color);
+        }
+
+        private void ApplyGameBackground(string gameId)
+        {
+            string backgroundFile = gameId switch
+            {
+                "nfsu" => "NFSU.png",
+                "nfsu2" => "NFSU2.png",
+                "nfsmw" => "NFSMW.png",
+                "nfsc" => "NFSC.png",
+                "nfsps" => "NFSPS.png",
+                "nfsuc" => "NFSUC.png",
+                _ => "NFSU.png"
+            };
+
+            try
+            {
+                var uri = new Uri(
+                    $"pack://application:,,,/Assets/Backgrounds/{backgroundFile}",
+                    UriKind.Absolute
+                );
+
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = uri;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze();
+
+                BackgroundImage.Source = bitmap;
+            }
+            catch
+            {
+                BackgroundImage.Source = null;
+            }
+        }
+
+        private static SolidColorBrush BrushFromHex(string hex)
+        {
+            return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+        }
+
+        private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_mode == "install" && !_installCommandSent)
+            {
+                WriteCommandFile("exit", "window_close_before_install");
+                return;
+            }
+
+            if (_mode == "install" && _installCommandSent)
+            {
+                WriteCommandFile("exit", "window_close_during_install");
+                return;
+            }
+
+            if (_mode == "uninstall" && !_rollbackRunning)
+            {
+                WriteCommandFile("exit", "window_close_before_restore");
+                return;
+            }
+
+            if (_mode == "uninstall" && _rollbackRunning)
+            {
+                WriteCommandFile("exit", "window_close_during_restore");
+                return;
+            }
+        }
+
+        private void WriteCommandFile(string command, string reason)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(_commandPath))
+                {
+                    string commandText =
+                        "command=" + command + Environment.NewLine +
+                        "source=LegacyUI" + Environment.NewLine +
+                        "reason=" + reason + Environment.NewLine;
+
+                    File.WriteAllText(_commandPath, commandText);
+                }
+            }
+            catch
+            {
+                // Closing must not crash the UI.
+            }
+        }
+
+        private void ShowWelcomePage()
+        {
+            _installPage = InstallFrontendPage.Welcome;
+
+            PathPanel.Visibility = Visibility.Collapsed;
+            BackButton.Visibility = Visibility.Collapsed;
+            FinishButton.Visibility = Visibility.Visible;
+            FinishButton.Content = "Next";
+
+            ProgressFill.Width = 0;
+            PercentText.Text = "0%";
+
+            StageText.Text = "Welcome";
+            DetailText.Text =
+                $"This wizard will install the {_profile.Title} using a rollback-safe backend. Your original files will be preserved for restore.";
+            ActivityText.Text = "Ready to configure installation...";
+            CurrentFileText.Text = "No files have been changed yet.";
+
+            FooterText.Text = $"Click Next to choose your {_profile.Title} game folder.";
+
+            ElapsedText.Text = "Elapsed: 0.0s";
+            SizeText.Text = "Folder size: waiting";
+            FileCountText.Text = "Files: waiting";
+            ManifestText.Text = "Install stage: welcome";
+        }
+
+        private void ShowChooseFolderPage()
+        {
+            _installPage = InstallFrontendPage.ChooseFolder;
+
+            PathPanel.Visibility = Visibility.Visible;
+            BackButton.Visibility = Visibility.Visible;
+            FinishButton.Visibility = Visibility.Visible;
+            FinishButton.Content = "Next";
+
+            if (string.IsNullOrWhiteSpace(SelectedPathTextBox.Text))
+                SelectedPathTextBox.Text = _selectedInstallPath;
+
+            ProgressFill.Width = 470 * 0.20;
+            PercentText.Text = "20%";
+
+            StageText.Text = "Choose game folder";
+            DetailText.Text =
+                $"Select the folder that contains your patched {_profile.Title} installation.";
+            ActivityText.Text = "Waiting for selected game directory...";
+            CurrentFileText.Text = GetExpectedExecutableHint();
+
+            FooterText.Text = "Choose the game folder, then click Next.";
+
+            SizeText.Text = Directory.Exists(SelectedPathTextBox.Text)
+                ? $"Folder size: {FormatBytes(GetSafeDirectorySize(SelectedPathTextBox.Text))}"
+                : "Folder size: unavailable";
+
+            FileCountText.Text = Directory.Exists(SelectedPathTextBox.Text)
+                ? $"Files: {GetSafeFileCount(SelectedPathTextBox.Text)}"
+                : "Files: unavailable";
+
+            ManifestText.Text = "Install stage: folder selection";
+        }
+
+        private void ShowValidationPage()
+        {
+            _installPage = InstallFrontendPage.Validation;
+
+            _selectedInstallPath = SelectedPathTextBox.Text.Trim();
+
+            PathPanel.Visibility = Visibility.Visible;
+            BackButton.Visibility = Visibility.Visible;
+            FinishButton.Visibility = Visibility.Visible;
+
+            bool valid = IsSelectedInstallReady(_selectedInstallPath);
+
+            ProgressFill.Width = 470 * 0.45;
+            PercentText.Text = "45%";
+
+            if (valid)
+            {
+                _allowUnsafeInstall = false;
+
+                StageText.Text = "Game folder validated";
+                DetailText.Text =
+                    $"The selected folder matches the expected patched {_profile.Title} installation state.";
+                ActivityText.Text = "Validation passed.";
+                CurrentFileText.Text = "Executable and required game data verified";
+                FooterText.Text = "Click Next to review the installation.";
+                FinishButton.Content = "Next";
+                ManifestText.Text = "Validation: passed";
+            }
+            else
+            {
+                _allowUnsafeInstall = true;
+
+                StageText.Text = "Validation warning";
+                DetailText.Text =
+                    $"The selected folder does not fully match the expected patched {_profile.Title} state. Installing anyway may break your game, cause crashes, missing textures, or failed startup.";
+                ActivityText.Text = "Validation failed. User confirmation required.";
+                CurrentFileText.Text = "Expected patched game files were not fully matched";
+                FooterText.Text = "Click Continue to install anyway, or Back to choose another folder.";
+                FinishButton.Content = "Continue";
+                ManifestText.Text = "Validation: warning";
+            }
+
+            SizeText.Text = Directory.Exists(_selectedInstallPath)
+                ? $"Folder size: {FormatBytes(GetSafeDirectorySize(_selectedInstallPath))}"
+                : "Folder size: unavailable";
+
+            FileCountText.Text = Directory.Exists(_selectedInstallPath)
+                ? $"Files: {GetSafeFileCount(_selectedInstallPath)}"
+                : "Files: unavailable";
+        }
+
+        private void ShowReadyToInstallPage()
+        {
+            _installPage = InstallFrontendPage.ReadyToInstall;
+
+            PathPanel.Visibility = Visibility.Visible;
+            BackButton.Visibility = Visibility.Visible;
+            FinishButton.Visibility = Visibility.Visible;
+            FinishButton.Content = "Install";
+
+            ProgressFill.Width = 470 * 0.60;
+            PercentText.Text = "60%";
+
+            StageText.Text = "Ready to install";
+            DetailText.Text =
+                "LegacyUI is ready to start the hidden Inno backend. The installer will extract, copy files, and write rollback metadata.";
+            ActivityText.Text = _allowUnsafeInstall
+                ? "Ready to install with validation warning accepted."
+                : "Ready to install with validated game folder.";
+            CurrentFileText.Text = "Waiting for Install command";
+
+            FooterText.Text = "Click Install to begin. Do not close this window during installation.";
+
+            ManifestText.Text = "Install stage: ready";
+        }
+
+        private void StartInstallBackend()
+        {
+            _installCommandSent = true;
+            _installPage = InstallFrontendPage.Installing;
+
+            _selectedInstallPath = SelectedPathTextBox.Text.Trim();
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(_commandPath))
+                {
+                    string commandText =
+                        "command=install" + Environment.NewLine +
+                        "target=" + _selectedInstallPath + Environment.NewLine +
+                        "source=LegacyUI" + Environment.NewLine +
+                        "validation=" + (_allowUnsafeInstall ? "warning_accepted" : "passed") + Environment.NewLine;
+
+                    string? commandDir = Path.GetDirectoryName(_commandPath);
+
+                    if (!string.IsNullOrWhiteSpace(commandDir))
+                        Directory.CreateDirectory(commandDir);
+
+                    if (File.Exists(_commandPath))
+                        File.Delete(_commandPath);
+
+                    File.WriteAllText(_commandPath, commandText);
+
+                    if (!File.Exists(_commandPath) || new FileInfo(_commandPath).Length == 0)
+                    {
+                        SetManualError("Install command file was not written correctly.");
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                SetManualError("Failed to write install command: " + ex.Message);
+                return;
+            }
+
+            PathPanel.Visibility = Visibility.Collapsed;
+            BackButton.Visibility = Visibility.Collapsed;
+            FinishButton.Visibility = Visibility.Collapsed;
+
+            CancelButton.Content = "Cancel";
+            CancelButton.IsEnabled = true;
+            CancelButton.Visibility = Visibility.Visible;
+
+            SetManualState(
+                5,
+                "Starting installation...",
+                "Install command sent. Waiting for backend installer activity.",
+                "Starting hidden Inno backend...",
+                "Installer backend"
+            );
+
+            FooterText.Text = "Installer engine is running in the background. Do not close this window.";
+
+            _timer.Start();
+            UpdateTelemetry();
+        }
+
+        private string GetExpectedExecutableHint()
+        {
+            return _gameId switch
+            {
+                "nfsu" => "Select folder containing Speed.exe",
+                "nfsu2" => "Select folder containing SPEED2.EXE",
+                "nfsmw" => "Select folder containing speed.exe",
+                "nfsc" => "Select folder containing NFSC.exe",
+                "nfsps" => "Select folder containing nfs.exe",
+                "nfsuc" => "Select folder containing nfs.exe",
+                _ => "Select folder containing the game executable"
+            };
+        }
+
+        private bool IsSelectedInstallReady(string baseDir)
+        {
+            if (string.IsNullOrWhiteSpace(baseDir))
+                return false;
+
+            if (!Directory.Exists(baseDir))
+                return false;
+
+            if (_gameId != "nfsu")
+            {
+                string detected = GameDetector.Detect(baseDir);
+                return !string.IsNullOrWhiteSpace(detected) && detected != "auto";
+            }
+
+            string exePath = Path.Combine(baseDir, "Speed.exe");
+
+            if (!File.Exists(exePath)) return false;
+            if (!FileSizeMatchesLocal(exePath, 3178496)) return false;
+
+            if (!FileSizeMatchesLocal(Path.Combine(baseDir, "FrontEnd", "FrontB.lzc"), 4182578)) return false;
+            if (!FileSizeMatchesLocal(Path.Combine(baseDir, "Global", "GlobalB.lzc"), 972201)) return false;
+            if (!FileSizeMatchesLocal(Path.Combine(baseDir, "Global", "InGameB.lzc"), 468419)) return false;
+            if (!FileSizeMatchesLocal(Path.Combine(baseDir, "Languages", "LANGUAGE_ENGLISH.bin"), 159280)) return false;
+
+            if (!Directory.Exists(Path.Combine(baseDir, "Cars"))) return false;
+            if (!Directory.Exists(Path.Combine(baseDir, "FrontEnd"))) return false;
+            if (!Directory.Exists(Path.Combine(baseDir, "Global"))) return false;
+            if (!Directory.Exists(Path.Combine(baseDir, "Languages"))) return false;
+            if (!Directory.Exists(Path.Combine(baseDir, "Tracks"))) return false;
+
+            return true;
+        }
+
+        private static bool FileSizeMatchesLocal(string filePath, long expectedSize)
+        {
+            try
+            {
+                return File.Exists(filePath) && new FileInfo(filePath).Length == expectedSize;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static long GetSafeDirectorySize(string dir)
+        {
+            try
+            {
+                long total = 0;
+
+                foreach (string file in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        total += new FileInfo(file).Length;
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                return total;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static int GetSafeFileCount(string dir)
+        {
+            try
+            {
+                int count = 0;
+
+                foreach (string _ in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+                    count++;
+
+                return count;
+            }
+            catch
+            {
+                return 0;
             }
         }
 
@@ -407,15 +981,21 @@ namespace LegacyUI
 
         private void SetManualError(string message)
         {
+            PathPanel.Visibility = Visibility.Collapsed;
+            BackButton.Visibility = Visibility.Collapsed;
+
             SetManualState(
                 100,
-                "Rollback failed",
+                _mode == "uninstall" ? "Rollback failed" : "Installation failed",
                 message,
-                "Error: rollback backend failed",
-                "Check _LegacyInstaller"
+                "Error: backend operation failed",
+                "Check installer state"
             );
 
-            FooterText.Text = "Rollback failed.";
+            FooterText.Text = _mode == "uninstall"
+                ? "Rollback failed."
+                : "Installation failed.";
+
             FinishButton.Content = "Close";
             FinishButton.Visibility = Visibility.Visible;
             _timer.Stop();
@@ -424,6 +1004,9 @@ namespace LegacyUI
         private void UpdateTelemetry()
         {
             if (_mode == "uninstall" && !_uninstallPrepared)
+                return;
+
+            if (_mode == "install" && !_installCommandSent)
                 return;
 
             ScanResult result = _scanner.Scan();
@@ -471,6 +1054,9 @@ namespace LegacyUI
 
                 FinishButton.Content = "Finish";
                 FinishButton.Visibility = Visibility.Visible;
+                BackButton.Visibility = Visibility.Collapsed;
+                CancelButton.Visibility = Visibility.Collapsed;
+                PathPanel.Visibility = Visibility.Collapsed;
 
                 _timer.Stop();
                 return;
@@ -501,6 +1087,9 @@ namespace LegacyUI
                 FooterText.Text = "The installer reported an error.";
                 FinishButton.Content = "Close";
                 FinishButton.Visibility = Visibility.Visible;
+                BackButton.Visibility = Visibility.Collapsed;
+                CancelButton.Visibility = Visibility.Collapsed;
+                PathPanel.Visibility = Visibility.Collapsed;
 
                 _timer.Stop();
                 return;
@@ -718,9 +1307,105 @@ namespace LegacyUI
             return $"{prefix} {files[_activityIndex]}";
         }
 
+        private void BrowseButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dialog = new Microsoft.Win32.OpenFolderDialog
+                {
+                    Title = $"Select {_profile.Title} folder",
+                    Multiselect = false
+                };
+
+                if (Directory.Exists(SelectedPathTextBox.Text))
+                    dialog.InitialDirectory = SelectedPathTextBox.Text;
+                else if (Directory.Exists(_selectedInstallPath))
+                    dialog.InitialDirectory = _selectedInstallPath;
+
+                bool? result = dialog.ShowDialog(this);
+
+                if (result == true && !string.IsNullOrWhiteSpace(dialog.FolderName))
+                {
+                    SelectedPathTextBox.Text = dialog.FolderName;
+                    _selectedInstallPath = dialog.FolderName;
+                }
+            }
+            catch (Exception ex)
+            {
+                SetManualError("Folder browser failed: " + ex.Message);
+            }
+        }
+
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_mode != "install" || _installCommandSent)
+                return;
+
+            if (_installPage == InstallFrontendPage.ChooseFolder)
+            {
+                ShowWelcomePage();
+            }
+            else if (_installPage == InstallFrontendPage.Validation)
+            {
+                ShowChooseFolderPage();
+            }
+            else if (_installPage == InstallFrontendPage.ReadyToInstall)
+            {
+                ShowValidationPage();
+            }
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_mode != "install" || !_installCommandSent)
+                return;
+
+            CancelButton.IsEnabled = false;
+            CancelButton.Content = "Cancelling...";
+
+            WriteCommandFile("abort", "cancel_button_during_install");
+
+            SetManualState(
+                100,
+                "Cancelling installation...",
+                "Cancel command sent. The installer backend is stopping extraction and cleaning temporary files.",
+                "Stopping backend installer...",
+                "Waiting for backend abort confirmation"
+            );
+
+            FooterText.Text = "Cancelling installation. Please wait...";
+        }
+
         private async void FinishButton_Click(object sender, RoutedEventArgs e)
         {
             string buttonText = FinishButton.Content?.ToString() ?? "";
+
+            if (_mode == "install" && !_installCommandSent)
+            {
+                if (_installPage == InstallFrontendPage.Welcome)
+                {
+                    ShowChooseFolderPage();
+                    return;
+                }
+
+                if (_installPage == InstallFrontendPage.ChooseFolder)
+                {
+                    ShowValidationPage();
+                    return;
+                }
+
+                if (_installPage == InstallFrontendPage.Validation)
+                {
+                    ShowReadyToInstallPage();
+                    return;
+                }
+
+                if (_installPage == InstallFrontendPage.ReadyToInstall)
+                {
+                    StartInstallBackend();
+                    return;
+                }
+            }
 
             if (_mode == "uninstall" &&
                 !_rollbackRunning &&
@@ -739,22 +1424,15 @@ namespace LegacyUI
 
             try
             {
-                if (!string.IsNullOrWhiteSpace(_commandPath))
-                {
-                    string commandText =
-                        "command=exit" + Environment.NewLine +
-                        "source=LegacyUI" + Environment.NewLine +
-                        "reason=finish_button" + Environment.NewLine;
-
-                    File.WriteAllText(_commandPath, commandText);
-                }
+                _timer.Stop();
             }
             catch
             {
-                // If command writing fails, still close the UI.
             }
 
-            Close();
+            WriteCommandFile("exit", "finish_button");
+
+            Environment.Exit(0);
         }
 
         private static string FormatBytes(long bytes)
