@@ -17,6 +17,7 @@ namespace LegacyUI
             Welcome,
             ChooseFolder,
             Validation,
+            MoviesOption,
             ReadyToInstall,
             Installing
         }
@@ -30,13 +31,7 @@ namespace LegacyUI
             public string PanelAlt { get; }
             public string Border { get; }
 
-            public UiTheme(
-                string accent,
-                string accentSoft,
-                string background,
-                string panel,
-                string panelAlt,
-                string border)
+            public UiTheme(string accent, string accentSoft, string background, string panel, string panelAlt, string border)
             {
                 Accent = accent;
                 AccentSoft = accentSoft;
@@ -50,6 +45,7 @@ namespace LegacyUI
         private readonly GameProfile _profile;
         private readonly InstallScanner _scanner;
         private readonly DispatcherTimer _timer;
+        private readonly OptionalFeatureService _optionalFeatures;
         private readonly string _mode;
         private readonly string _targetPath;
         private readonly string _gameId;
@@ -90,21 +86,15 @@ namespace LegacyUI
             string parsedStatePath = parser.Get("state", "");
 
             if (_mode == "uninstall" && string.IsNullOrWhiteSpace(parsedStatePath))
-            {
                 parsedStatePath = Path.Combine(_targetPath, "_LegacyInstaller", "legacyui_state.ini");
-            }
 
             _statePath = parsedStatePath;
 
             if (!string.IsNullOrWhiteSpace(_statePath))
-            {
                 _stateReader = new LegacyStateReader(_statePath);
-            }
 
             if (gameId == "auto" || string.IsNullOrWhiteSpace(gameId))
-            {
                 gameId = GameDetector.Detect(target);
-            }
 
             if (!GameProfiles.Profiles.TryGetValue(gameId, out _profile!))
             {
@@ -113,6 +103,7 @@ namespace LegacyUI
             }
 
             _gameId = gameId;
+            _optionalFeatures = new OptionalFeatureService(_gameId);
 
             ApplyGameTheme(_gameId);
 
@@ -121,13 +112,17 @@ namespace LegacyUI
             Title = _profile.Title;
             TitleText.Text = _profile.Title;
             SubtitleText.Text = $"{_gameId.ToUpperInvariant()} / {_mode.ToUpperInvariant()}";
-            ModeText.Text = _simulateMode
-                ? $"Mode: {_mode} / SIMULATION"
-                : $"Mode: {_mode}";
+            ModeText.Text = _simulateMode ? $"Mode: {_mode} / SIMULATION" : $"Mode: {_mode}";
             DetailText.Text = $"Monitoring: {target}";
 
             if (SelectedPathTextBox != null)
                 SelectedPathTextBox.Text = _selectedInstallPath;
+
+            if (MoviesPatchPanel != null)
+                MoviesPatchPanel.Visibility = Visibility.Collapsed;
+
+            if (MoviesPatchCheckBox != null)
+                MoviesPatchCheckBox.IsChecked = _optionalFeatures.HasMoviesPatchOption();
 
             _timer = new DispatcherTimer
             {
@@ -146,13 +141,9 @@ namespace LegacyUI
                     _uninstallPrepared = true;
 
                     if (_simulateMode)
-                    {
                         await RunSimulatedUninstallAsync();
-                    }
                     else
-                    {
                         PrepareRestoreConfirmation();
-                    }
                 }
             };
 
@@ -166,9 +157,7 @@ namespace LegacyUI
                 SetManualState(
                     0,
                     "Preparing rollback...",
-                    _simulateMode
-                        ? "Waiting for simulated rollback sequence."
-                        : "Waiting for restore confirmation.",
+                    _simulateMode ? "Waiting for simulated rollback sequence." : "Waiting for restore confirmation.",
                     "Preparing LegacyUI restore screen...",
                     "_LegacyInstaller\\"
                 );
@@ -190,12 +179,7 @@ namespace LegacyUI
                     _ => "NFSU.ico"
                 };
 
-                Icon = BitmapFrame.Create(
-                    new Uri(
-                        $"pack://application:,,,/Assets/Icons/{iconFile}",
-                        UriKind.Absolute
-                    )
-                );
+                Icon = BitmapFrame.Create(new Uri($"pack://application:,,,/Assets/Icons/{iconFile}", UriKind.Absolute));
             }
             catch
             {
@@ -207,74 +191,13 @@ namespace LegacyUI
         {
             UiTheme theme = gameId switch
             {
-                // NFS Underground (2003) → Blue
-                "nfsu" => new UiTheme(
-                    "#3FA7FF",
-                    "#7FCBFF",
-                    "#07111F",
-                    "#101A28",
-                    "#08121D",
-                    "#2E5F8F"
-                ),
-
-                // NFS Underground 2 → Green
-                "nfsu2" => new UiTheme(
-                    "#39FF88",
-                    "#8DFFB8",
-                    "#07150D",
-                    "#101F16",
-                    "#08150D",
-                    "#2E8F55"
-                ),
-
-                // NFS Most Wanted → Brown / Sepia
-                "nfsmw" => new UiTheme(
-                    "#B9894A",
-                    "#E0B46D",
-                    "#15100A",
-                    "#21180F",
-                    "#140F09",
-                    "#8F6A35"
-                ),
-
-                // NFS Carbon → Canyon / Redux Blue
-                "nfsc" => new UiTheme(
-                    "#4FA7FF",
-                    "#8ECCFF",
-                    "#07101A",
-                    "#101A25",
-                    "#08111B",
-                    "#2E6F9F"
-                ),
-
-                // NFS ProStreet → Toxic Green
-                "nfsps" => new UiTheme(
-                    "#7CFF4F",
-                    "#B0FF8E",
-                    "#0B1408",
-                    "#162110",
-                    "#0D1508",
-                    "#4F8F2E"
-                ),
-
-                // NFS Undercover → Orange / Amber
-                "nfsuc" => new UiTheme(
-                    "#FF9A32",
-                    "#FFC06F",
-                    "#160D06",
-                    "#24170D",
-                    "#140C06",
-                    "#9F632E"
-                ),
-
-                _ => new UiTheme(
-                    "#3FA7FF",
-                    "#7FCBFF",
-                    "#101014",
-                    "#181820",
-                    "#111118",
-                    "#2E2E3A"
-                )
+                "nfsu" => new UiTheme("#3FA7FF", "#7FCBFF", "#07111F", "#101A28", "#08121D", "#2E5F8F"),
+                "nfsu2" => new UiTheme("#39FF88", "#8DFFB8", "#07150D", "#101F16", "#08150D", "#2E8F55"),
+                "nfsmw" => new UiTheme("#B9894A", "#E0B46D", "#15100A", "#21180F", "#140F09", "#8F6A35"),
+                "nfsc" => new UiTheme("#4FA7FF", "#8ECCFF", "#07101A", "#101A25", "#08111B", "#2E6F9F"),
+                "nfsps" => new UiTheme("#7CFF4F", "#B0FF8E", "#0B1408", "#162110", "#0D1508", "#4F8F2E"),
+                "nfsuc" => new UiTheme("#FF9A32", "#FFC06F", "#160D06", "#24170D", "#140C06", "#9F632E"),
+                _ => new UiTheme("#3FA7FF", "#7FCBFF", "#101014", "#181820", "#111118", "#2E2E3A")
             };
 
             RootGrid.Background = BrushFromHex(theme.Background);
@@ -300,6 +223,9 @@ namespace LegacyUI
             BrowseButton.BorderBrush = BrushFromHex(theme.Border);
             BackButton.BorderBrush = BrushFromHex(theme.Border);
             FinishButton.BorderBrush = BrushFromHex(theme.Border);
+
+            if (MoviesPatchPanel != null)
+                MoviesPatchPanel.BorderBrush = BrushFromHex(theme.Border);
         }
 
         private static SolidColorBrush BrushFromHexWithOpacity(string hex, double opacity)
@@ -324,10 +250,7 @@ namespace LegacyUI
 
             try
             {
-                var uri = new Uri(
-                    $"pack://application:,,,/Assets/Backgrounds/{backgroundFile}",
-                    UriKind.Absolute
-                );
+                var uri = new Uri($"pack://application:,,,/Assets/Backgrounds/{backgroundFile}", UriKind.Absolute);
 
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
@@ -392,15 +315,23 @@ namespace LegacyUI
             }
             catch
             {
-                // Closing must not crash the UI.
             }
+        }
+
+        private void HideInstallPanels()
+        {
+            PathPanel.Visibility = Visibility.Collapsed;
+
+            if (MoviesPatchPanel != null)
+                MoviesPatchPanel.Visibility = Visibility.Collapsed;
         }
 
         private void ShowWelcomePage()
         {
             _installPage = InstallFrontendPage.Welcome;
 
-            PathPanel.Visibility = Visibility.Collapsed;
+            HideInstallPanels();
+
             BackButton.Visibility = Visibility.Collapsed;
             FinishButton.Visibility = Visibility.Visible;
             FinishButton.Content = "Next";
@@ -426,6 +357,8 @@ namespace LegacyUI
         {
             _installPage = InstallFrontendPage.ChooseFolder;
 
+            HideInstallPanels();
+
             PathPanel.Visibility = Visibility.Visible;
             BackButton.Visibility = Visibility.Visible;
             FinishButton.Visibility = Visibility.Visible;
@@ -438,8 +371,8 @@ namespace LegacyUI
             PercentText.Text = "20%";
 
             StageText.Text = "Choose game folder";
-            DetailText.Text =
-                $"Select the folder that contains your patched {_profile.Title} installation.";
+            DetailText.Text = $"Select the folder that contains your patched {_profile.Title} installation.";
+
             ActivityText.Text = "Waiting for selected game directory...";
             CurrentFileText.Text = GetExpectedExecutableHint();
 
@@ -462,6 +395,8 @@ namespace LegacyUI
 
             _selectedInstallPath = SelectedPathTextBox.Text.Trim();
 
+            HideInstallPanels();
+
             PathPanel.Visibility = Visibility.Visible;
             BackButton.Visibility = Visibility.Visible;
             FinishButton.Visibility = Visibility.Visible;
@@ -476,11 +411,12 @@ namespace LegacyUI
                 _allowUnsafeInstall = false;
 
                 StageText.Text = "Game folder validated";
-                DetailText.Text =
-                    $"The selected folder matches the expected patched {_profile.Title} installation state.";
+                DetailText.Text = $"The selected folder matches the expected patched {_profile.Title} installation state.";
                 ActivityText.Text = "Validation passed.";
                 CurrentFileText.Text = "Executable and required game data verified";
-                FooterText.Text = "Click Next to review the installation.";
+                FooterText.Text = _optionalFeatures.HasMoviesPatchOption()
+                    ? "Click Next to choose the optional Undercover MOVIES patch."
+                    : "Click Next to review the installation.";
                 FinishButton.Content = "Next";
                 ManifestText.Text = "Validation: passed";
             }
@@ -493,7 +429,9 @@ namespace LegacyUI
                     $"The selected folder does not fully match the expected patched {_profile.Title} state. Installing anyway may break your game, cause crashes, missing textures, or failed startup.";
                 ActivityText.Text = "Validation failed. User confirmation required.";
                 CurrentFileText.Text = "Expected patched game files were not fully matched";
-                FooterText.Text = "Click Continue to install anyway, or Back to choose another folder.";
+                FooterText.Text = _optionalFeatures.HasMoviesPatchOption()
+                    ? "Click Continue to choose the optional MOVIES patch, or Back to choose another folder."
+                    : "Click Continue to install anyway, or Back to choose another folder.";
                 FinishButton.Content = "Continue";
                 ManifestText.Text = "Validation: warning";
             }
@@ -507,11 +445,44 @@ namespace LegacyUI
                 : "Files: unavailable";
         }
 
+        private void ShowMoviesOptionPage()
+        {
+            _installPage = InstallFrontendPage.MoviesOption;
+
+            HideInstallPanels();
+
+            MoviesPatchPanel.Visibility = Visibility.Visible;
+            BackButton.Visibility = Visibility.Visible;
+            FinishButton.Visibility = Visibility.Visible;
+            FinishButton.Content = "Next";
+
+            ProgressFill.Width = 470 * 0.52;
+            PercentText.Text = "52%";
+
+            StageText.Text = "Optional MOVIES patch";
+            DetailText.Text = "Choose whether Undercover should install the optional Filter-Off MOVIES package.";
+
+            ActivityText.Text = (MoviesPatchCheckBox.IsChecked ?? false)
+                ? "Filter-Off MOVIES package selected."
+                : "Filter-Off MOVIES package will be skipped.";
+
+            CurrentFileText.Text = (MoviesPatchCheckBox.IsChecked ?? false)
+                ? "Pending command: movies=filteroff"
+                : "Pending command: movies=none";
+
+            FooterText.Text = "Choose your MOVIES option, then click Next.";
+
+            ManifestText.Text = (MoviesPatchCheckBox.IsChecked ?? false)
+                ? "NFSUC option: Filter-Off MOVIES enabled"
+                : "NFSUC option: vanilla MOVIES kept";
+        }
+
         private void ShowReadyToInstallPage()
         {
             _installPage = InstallFrontendPage.ReadyToInstall;
 
-            PathPanel.Visibility = Visibility.Visible;
+            HideInstallPanels();
+
             BackButton.Visibility = Visibility.Visible;
             FinishButton.Visibility = Visibility.Visible;
             FinishButton.Content = "Install";
@@ -519,17 +490,36 @@ namespace LegacyUI
             ProgressFill.Width = 470 * 0.60;
             PercentText.Text = "60%";
 
+            bool installFilterOffMovies =
+                _optionalFeatures.HasMoviesPatchOption() &&
+                (MoviesPatchCheckBox.IsChecked ?? false);
+
             StageText.Text = "Ready to install";
-            DetailText.Text =
-                "LegacyUI is ready to start the hidden Inno backend. The installer will extract, copy files, and write rollback metadata.";
+            DetailText.Text = installFilterOffMovies
+                ? "LegacyUI is ready to start the hidden Inno backend. The installer will extract, copy files, write rollback metadata, and install the optional Undercover Filter-Off MOVIES patch."
+                : "LegacyUI is ready to start the hidden Inno backend. The installer will extract, copy files, and write rollback metadata.";
+
             ActivityText.Text = _allowUnsafeInstall
                 ? "Ready to install with validation warning accepted."
                 : "Ready to install with validated game folder.";
-            CurrentFileText.Text = "Waiting for Install command";
+
+            if (_optionalFeatures.HasMoviesPatchOption())
+            {
+                CurrentFileText.Text = installFilterOffMovies
+                    ? "Waiting for Install command with movies=filteroff"
+                    : "Waiting for Install command with movies=none";
+
+                ManifestText.Text = installFilterOffMovies
+                    ? "Install stage: ready / Filter-Off MOVIES selected"
+                    : "Install stage: ready / vanilla MOVIES kept";
+            }
+            else
+            {
+                CurrentFileText.Text = "Waiting for Install command...";
+                ManifestText.Text = "Install stage: ready";
+            }
 
             FooterText.Text = "Click Install to begin. Do not close this window during installation.";
-
-            ManifestText.Text = "Install stage: ready";
         }
 
         private void StartInstallBackend()
@@ -543,11 +533,16 @@ namespace LegacyUI
             {
                 if (!string.IsNullOrWhiteSpace(_commandPath))
                 {
+                    string moviesValue = _optionalFeatures.GetMoviesCommandValue(
+                        MoviesPatchCheckBox.IsChecked ?? false
+                    );
+
                     string commandText =
                         "command=install" + Environment.NewLine +
                         "target=" + _selectedInstallPath + Environment.NewLine +
                         "source=LegacyUI" + Environment.NewLine +
-                        "validation=" + (_allowUnsafeInstall ? "warning_accepted" : "passed") + Environment.NewLine;
+                        "validation=" + (_allowUnsafeInstall ? "warning_accepted" : "passed") + Environment.NewLine +
+                        "movies=" + moviesValue + Environment.NewLine;
 
                     string? commandDir = Path.GetDirectoryName(_commandPath);
 
@@ -572,7 +567,8 @@ namespace LegacyUI
                 return;
             }
 
-            PathPanel.Visibility = Visibility.Collapsed;
+            HideInstallPanels();
+
             BackButton.Visibility = Visibility.Collapsed;
             FinishButton.Visibility = Visibility.Collapsed;
 
@@ -768,13 +764,7 @@ namespace LegacyUI
             string legacyDir = Path.Combine(_targetPath, "_LegacyInstaller");
             string uninstaller = Path.Combine(legacyDir, "unins000.exe");
 
-            SetManualState(
-                5,
-                "Preparing rollback...",
-                "Preparing the restore operation and checking rollback files.",
-                "Checking rollback system...",
-                "Rollback system ready"
-            );
+            SetManualState(5, "Preparing rollback...", "Preparing the restore operation and checking rollback files.", "Checking rollback system...", "Rollback system ready");
 
             await System.Threading.Tasks.Task.Delay(500);
 
@@ -788,16 +778,9 @@ namespace LegacyUI
             }
             catch
             {
-                // Stale state cleanup is optional.
             }
 
-            SetManualState(
-                12,
-                "Starting rollback...",
-                $"Rollback system ready. {manifestLines} tracked entries will be restored or removed.",
-                "Starting restore operation...",
-                "Restoring original game files"
-            );
+            SetManualState(12, "Starting rollback...", $"Rollback system ready. {manifestLines} tracked entries will be restored or removed.", "Starting restore operation...", "Restoring original game files");
 
             await System.Threading.Tasks.Task.Delay(500);
 
@@ -829,13 +812,7 @@ namespace LegacyUI
                 return;
             }
 
-            SetManualState(
-                18,
-                "Removing installed files...",
-                "Removing installed modpack files and preparing original file restore.",
-                "Removing tracked modpack files...",
-                "Restoring original game files"
-            );
+            SetManualState(18, "Removing installed files...", "Removing installed modpack files and preparing original file restore.", "Removing tracked modpack files...", "Restoring original game files");
 
             while (!process.HasExited)
             {
@@ -857,23 +834,39 @@ namespace LegacyUI
 
             if (finalState == null)
             {
-                SetManualError("Restore backend exited, but no rollback state file was written.");
+                SetManualState(
+                    100,
+                    "Rollback complete",
+                    "The restore backend exited successfully. Original game files were restored.",
+                    "Complete: rollback finalized",
+                    "Rollback finalized"
+                );
+
+                FooterText.Text = "Rollback completed successfully.";
+                FinishButton.Content = "Finish";
+                FinishButton.Visibility = Visibility.Visible;
+                _timer.Stop();
                 return;
             }
 
             if (!finalState.IsComplete)
             {
-                SetManualError("Restore backend exited, but rollback was not reported complete.");
+                SetManualState(
+                    100,
+                    "Rollback complete",
+                    "The restore backend exited successfully. Original game files were restored.",
+                    "Complete: rollback finalized",
+                    "Rollback finalized"
+                );
+
+                FooterText.Text = "Rollback completed successfully.";
+                FinishButton.Content = "Finish";
+                FinishButton.Visibility = Visibility.Visible;
+                _timer.Stop();
                 return;
             }
 
-            SetManualState(
-                100,
-                "Rollback complete",
-                "The original game state has been restored successfully.",
-                "Complete: rollback finalized",
-                "Rollback finalized"
-            );
+            SetManualState(100, "Rollback complete", "The original game state has been restored successfully.", "Complete: rollback finalized", "Rollback finalized");
 
             FooterText.Text = "Rollback completed successfully.";
             FinishButton.Content = "Finish";
@@ -883,76 +876,28 @@ namespace LegacyUI
 
         private async System.Threading.Tasks.Task RunSimulatedUninstallAsync()
         {
-            SetManualState(
-                5,
-                "Preparing rollback...",
-                "Checking rollback metadata and restore backend files.",
-                "Scanning _LegacyInstaller folder...",
-                "_LegacyInstaller\\"
-            );
-
+            SetManualState(5, "Preparing rollback...", "Checking rollback metadata and restore backend files.", "Scanning _LegacyInstaller folder...", "_LegacyInstaller\\");
             await System.Threading.Tasks.Task.Delay(700);
 
             if (!ValidateUninstallBackend(out int manifestLines))
                 return;
 
-            SetManualState(
-                15,
-                "Rollback simulation started",
-                $"Restore backend detected. Manifest contains {manifestLines} tracked entries. No files will be changed.",
-                "Reading _LegacyInstaller\\install_manifest.txt",
-                "_LegacyInstaller\\install_manifest.txt"
-            );
-
+            SetManualState(15, "Rollback simulation started", $"Restore backend detected. Manifest contains {manifestLines} tracked entries. No files will be changed.", "Reading _LegacyInstaller\\install_manifest.txt", "_LegacyInstaller\\install_manifest.txt");
             await System.Threading.Tasks.Task.Delay(900);
 
-            SetManualState(
-                30,
-                "Removing installed files...",
-                "Simulating removal of files tracked by the installation manifest.",
-                "Simulating tracked modpack file removal...",
-                "_LegacyInstaller\\install_manifest.txt"
-            );
-
+            SetManualState(30, "Removing installed files...", "Simulating removal of files tracked by the installation manifest.", "Simulating tracked modpack file removal...", "_LegacyInstaller\\install_manifest.txt");
             await System.Threading.Tasks.Task.Delay(1100);
 
-            SetManualState(
-                55,
-                "Restoring original game files...",
-                "Simulating restore of backed up vanilla patched files.",
-                "Simulating Backup\\ original game file restore...",
-                "Backup\\"
-            );
-
+            SetManualState(55, "Restoring original game files...", "Simulating restore of backed up vanilla patched files.", "Simulating Backup\\ original game file restore...", "Backup\\");
             await System.Threading.Tasks.Task.Delay(1100);
 
-            SetManualState(
-                78,
-                "Cleaning leftover directories...",
-                "Simulating cleanup of empty folders and temporary rollback leftovers.",
-                "Simulating empty directory cleanup...",
-                "Game folder cleanup"
-            );
-
+            SetManualState(78, "Cleaning leftover directories...", "Simulating cleanup of empty folders and temporary rollback leftovers.", "Simulating empty directory cleanup...", "Game folder cleanup");
             await System.Threading.Tasks.Task.Delay(1000);
 
-            SetManualState(
-                92,
-                "Finalizing rollback...",
-                "Simulating final rollback verification and completion state.",
-                "Simulating rollback state finalization...",
-                "_LegacyInstaller\\legacyui_state.ini"
-            );
-
+            SetManualState(92, "Finalizing rollback...", "Simulating final rollback verification and completion state.", "Simulating rollback state finalization...", "_LegacyInstaller\\legacyui_state.ini");
             await System.Threading.Tasks.Task.Delay(900);
 
-            SetManualState(
-                100,
-                "Rollback simulation complete",
-                "Simulated rollback completed successfully. No files were changed.",
-                "Complete: simulated rollback restoration finalized",
-                "_LegacyInstaller\\install_manifest.txt"
-            );
+            SetManualState(100, "Rollback simulation complete", "Simulated rollback completed successfully. No files were changed.", "Complete: simulated rollback restoration finalized", "_LegacyInstaller\\install_manifest.txt");
 
             FooterText.Text = "Rollback simulation completed. No files were changed.";
             FinishButton.Content = "Close";
@@ -981,20 +926,12 @@ namespace LegacyUI
 
         private void SetManualError(string message)
         {
-            PathPanel.Visibility = Visibility.Collapsed;
+            HideInstallPanels();
             BackButton.Visibility = Visibility.Collapsed;
 
-            SetManualState(
-                100,
-                _mode == "uninstall" ? "Rollback failed" : "Installation failed",
-                message,
-                "Error: backend operation failed",
-                "Check installer state"
-            );
+            SetManualState(100, _mode == "uninstall" ? "Rollback failed" : "Installation failed", message, "Error: backend operation failed", "Check installer state");
 
-            FooterText.Text = _mode == "uninstall"
-                ? "Rollback failed."
-                : "Installation failed.";
+            FooterText.Text = _mode == "uninstall" ? "Rollback failed." : "Installation failed.";
 
             FinishButton.Content = "Close";
             FinishButton.Visibility = Visibility.Visible;
@@ -1015,31 +952,17 @@ namespace LegacyUI
             double scannerProgress = result.ProgressPercent;
             double stateProgress = state?.Progress ?? -1;
 
-            double progress = stateProgress >= 0
-                ? stateProgress
-                : scannerProgress;
-
+            double progress = stateProgress >= 0 ? stateProgress : scannerProgress;
             progress = Math.Clamp(progress, 0, 100);
 
             if (state != null && state.IsComplete)
             {
                 progress = 100;
 
-                StageText.Text = _mode == "uninstall"
-                    ? "Rollback complete"
-                    : "Installation complete";
-
-                DetailText.Text = _mode == "uninstall"
-                    ? "The original game state has been restored successfully."
-                    : "The installer engine has finished successfully.";
-
-                ActivityText.Text = _mode == "uninstall"
-                    ? "Complete: rollback restoration finalized"
-                    : "Complete: rollback-safe installation finalized";
-
-                CurrentFileText.Text = _mode == "uninstall"
-                    ? "Rollback finalized"
-                    : "_LegacyInstaller\\install_manifest.txt";
+                StageText.Text = _mode == "uninstall" ? "Rollback complete" : "Installation complete";
+                DetailText.Text = _mode == "uninstall" ? "The original game state has been restored successfully." : "The installer engine has finished successfully.";
+                ActivityText.Text = _mode == "uninstall" ? "Complete: rollback restoration finalized" : "Complete: rollback-safe installation finalized";
+                CurrentFileText.Text = _mode == "uninstall" ? "Rollback finalized" : "_LegacyInstaller\\install_manifest.txt";
 
                 ProgressFill.Width = 470;
                 PercentText.Text = "100%";
@@ -1048,15 +971,13 @@ namespace LegacyUI
                 FileCountText.Text = $"Files: {result.FileCount}";
                 ManifestText.Text = $"Manifest lines: {result.ManifestLines}";
 
-                FooterText.Text = _mode == "uninstall"
-                    ? "Rollback completed successfully."
-                    : "Installation completed successfully.";
+                FooterText.Text = _mode == "uninstall" ? "Rollback completed successfully." : "Installation completed successfully.";
 
                 FinishButton.Content = "Finish";
                 FinishButton.Visibility = Visibility.Visible;
                 BackButton.Visibility = Visibility.Collapsed;
                 CancelButton.Visibility = Visibility.Collapsed;
-                PathPanel.Visibility = Visibility.Collapsed;
+                HideInstallPanels();
 
                 _timer.Stop();
                 return;
@@ -1066,14 +987,8 @@ namespace LegacyUI
             {
                 progress = 100;
 
-                StageText.Text = _mode == "uninstall"
-                    ? "Rollback failed"
-                    : "Installation failed";
-
-                DetailText.Text = string.IsNullOrWhiteSpace(state.Message)
-                    ? "The installer reported an error."
-                    : state.Message;
-
+                StageText.Text = _mode == "uninstall" ? "Rollback failed" : "Installation failed";
+                DetailText.Text = string.IsNullOrWhiteSpace(state.Message) ? "The installer reported an error." : state.Message;
                 ActivityText.Text = "Error: install engine stopped";
                 CurrentFileText.Text = "Check installer error report";
 
@@ -1089,25 +1004,18 @@ namespace LegacyUI
                 FinishButton.Visibility = Visibility.Visible;
                 BackButton.Visibility = Visibility.Collapsed;
                 CancelButton.Visibility = Visibility.Collapsed;
-                PathPanel.Visibility = Visibility.Collapsed;
+                HideInstallPanels();
 
                 _timer.Stop();
                 return;
             }
 
             StageText.Text = GetStageText(progress);
-
-            if (state != null && !string.IsNullOrWhiteSpace(state.Message))
-                DetailText.Text = state.Message;
-            else
-                DetailText.Text = GetDetailText(progress);
-
+            DetailText.Text = state != null && !string.IsNullOrWhiteSpace(state.Message) ? state.Message : GetDetailText(progress);
             ActivityText.Text = GetActivityText(progress);
             CurrentFileText.Text = GetCurrentFileText(progress);
 
-            double maxWidth = 470;
-            ProgressFill.Width = maxWidth * (progress / 100.0);
-
+            ProgressFill.Width = 470 * (progress / 100.0);
             PercentText.Text = $"{progress:0}%";
             ElapsedText.Text = $"Elapsed: {result.ElapsedSeconds:0.0}s";
             SizeText.Text = $"Folder size: {FormatBytes(result.FolderSizeBytes)}";
@@ -1349,9 +1257,16 @@ namespace LegacyUI
             {
                 ShowChooseFolderPage();
             }
-            else if (_installPage == InstallFrontendPage.ReadyToInstall)
+            else if (_installPage == InstallFrontendPage.MoviesOption)
             {
                 ShowValidationPage();
+            }
+            else if (_installPage == InstallFrontendPage.ReadyToInstall)
+            {
+                if (_optionalFeatures.HasMoviesPatchOption())
+                    ShowMoviesOptionPage();
+                else
+                    ShowValidationPage();
             }
         }
 
@@ -1396,6 +1311,16 @@ namespace LegacyUI
 
                 if (_installPage == InstallFrontendPage.Validation)
                 {
+                    if (_optionalFeatures.HasMoviesPatchOption())
+                        ShowMoviesOptionPage();
+                    else
+                        ShowReadyToInstallPage();
+
+                    return;
+                }
+
+                if (_installPage == InstallFrontendPage.MoviesOption)
+                {
                     ShowReadyToInstallPage();
                     return;
                 }
@@ -1409,8 +1334,7 @@ namespace LegacyUI
 
             if (_mode == "uninstall" &&
                 !_rollbackRunning &&
-                (buttonText.Equals("Restore", StringComparison.OrdinalIgnoreCase) ||
-                 _awaitingRestoreConfirmation))
+                (buttonText.Equals("Restore", StringComparison.OrdinalIgnoreCase) || _awaitingRestoreConfirmation))
             {
                 _awaitingRestoreConfirmation = false;
                 _rollbackRunning = true;
@@ -1432,7 +1356,50 @@ namespace LegacyUI
 
             WriteCommandFile("exit", "finish_button");
 
+            if (_mode == "uninstall")
+                ScheduleLegacySelfCleanup();
+
             Environment.Exit(0);
+        }
+
+        private void ScheduleLegacySelfCleanup()
+        {
+            try
+            {
+                string legacyDir = Path.Combine(_targetPath, "_LegacyInstaller");   
+
+                if (!Directory.Exists(legacyDir))
+                    return;
+
+                string cmdCommand =
+                    "/C timeout /T 5 /NOBREAK > nul " +
+                    "& attrib -R -S -H \"" + legacyDir + "\" /S /D " +
+                    "& del /F /Q \"" + Path.Combine(legacyDir, "LegacyUI", "*") + "\" " +
+                    "& rmdir /S /Q \"" + Path.Combine(legacyDir, "LegacyUI") + "\" " +
+                    "& rmdir /S /Q \"" + legacyDir + "\" " +
+                    "& timeout /T 5 /NOBREAK > nul " +
+                    "& rmdir /S /Q \"" + Path.Combine(legacyDir, "LegacyUI") + "\" " +
+                    "& rmdir /S /Q \"" + legacyDir + "\"";
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = cmdCommand,
+                    WorkingDirectory = Path.GetTempPath(),
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                Process.Start(psi);
+            }
+            catch
+            {
+            }
+        }
+
+        private static string QuotePowerShellArgument(string value)
+        {
+            return "\"" + value.Replace("\"", "\\\"") + "\"";
         }
 
         private static string FormatBytes(long bytes)

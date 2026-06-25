@@ -10,14 +10,18 @@ internal static class Program
     private sealed class ApprovedInstaller
     {
         public string AppId { get; }
-        public string Backend { get; }
+        public string Game { get; }
+        public string BackendFileName { get; }
         public string Title { get; }
+        public string IconPath { get; }
 
-        public ApprovedInstaller(string appId, string backend, string title)
+        public ApprovedInstaller(string appId, string game, string backendFileName, string title, string iconPath)
         {
             AppId = NormalizeAppId(appId);
-            Backend = backend;
+            Game = game;
+            BackendFileName = backendFileName;
             Title = title;
+            IconPath = iconPath;
         }
     }
 
@@ -27,27 +31,56 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         string launcherDir = AppContext.BaseDirectory;
-        string backendDir = Path.Combine(launcherDir, "_backend");
 
         var approvedInstallers = new Dictionary<string, ApprovedInstaller>(StringComparer.OrdinalIgnoreCase)
         {
             [NormalizeAppId("{6E2E96A4-8A9A-45F9-BD76-5514E2D1A140}")] =
-                new ApprovedInstaller("{6E2E96A4-8A9A-45F9-BD76-5514E2D1A140}", "UndergroundMP.exe", "Underground Legacy Modpack"),
+                new ApprovedInstaller(
+                    "{6E2E96A4-8A9A-45F9-BD76-5514E2D1A140}",
+                    "nfsu",
+                    "UndergroundMP.exe",
+                    "Underground Legacy Modpack",
+                    @"Assets\Icons\NFSU.ico"),
 
             [NormalizeAppId("{B42B49F2-6F0C-48D6-91D2-2E1F37A6C2D8}")] =
-                new ApprovedInstaller("{B42B49F2-6F0C-48D6-91D2-2E1F37A6C2D8}", "Underground2MP.exe", "Underground 2 Legacy Modpack"),
+                new ApprovedInstaller(
+                    "{B42B49F2-6F0C-48D6-91D2-2E1F37A6C2D8}",
+                    "nfsu2",
+                    "Underground2MP.exe",
+                    "Underground 2 Legacy Modpack",
+                    @"Assets\Icons\NFSU2.ico"),
 
             [NormalizeAppId("{E0C9B896-11D2-41A7-B9B0-0B71D0F3E2A5}")] =
-                new ApprovedInstaller("{E0C9B896-11D2-41A7-B9B0-0B71D0F3E2A5}", "MostWantedMP.exe", "Most Wanted Legacy Modpack"),
+                new ApprovedInstaller(
+                    "{E0C9B896-11D2-41A7-B9B0-0B71D0F3E2A5}",
+                    "nfsmw",
+                    "MostWantedMP.exe",
+                    "Most Wanted Legacy Modpack",
+                    @"Assets\Icons\NFSMW.ico"),
 
             [NormalizeAppId("{D1B0EFD4-4570-4F52-93A2-7A4A8E42D6C1}")] =
-                new ApprovedInstaller("{D1B0EFD4-4570-4F52-93A2-7A4A8E42D6C1}", "CarbonMP.exe", "Carbon Legacy Modpack"),
+                new ApprovedInstaller(
+                    "{D1B0EFD4-4570-4F52-93A2-7A4A8E42D6C1}",
+                    "nfsc",
+                    "CarbonMP.exe",
+                    "Carbon Legacy Modpack",
+                    @"Assets\Icons\NFSC.ico"),
 
             [NormalizeAppId("{9E3C25AE-2F4B-407D-9B45-8E01C07F73D6}")] =
-                new ApprovedInstaller("{9E3C25AE-2F4B-407D-9B45-8E01C07F73D6}", "ProStreetMP.exe", "ProStreet Legacy Modpack"),
+                new ApprovedInstaller(
+                    "{9E3C25AE-2F4B-407D-9B45-8E01C07F73D6}",
+                    "nfsps",
+                    "ProStreetMP.exe",
+                    "ProStreet Legacy Modpack",
+                    @"Assets\Icons\NFSPS.ico"),
 
             [NormalizeAppId("{5F1C8E3D-9A24-44C1-BB0A-51C8D6B74E92}")] =
-                new ApprovedInstaller("{5F1C8E3D-9A24-44C1-BB0A-51C8D6B74E92}", "UndercoverMP.exe", "Undercover Legacy Modpack")
+                new ApprovedInstaller(
+                    "{5F1C8E3D-9A24-44C1-BB0A-51C8D6B74E92}",
+                    "nfsuc",
+                    "UndercoverMP.exe",
+                    "Undercover Legacy Modpack",
+                    @"Assets\Icons\NFSUC.ico")
         };
 
         Dictionary<string, string> config;
@@ -76,18 +109,34 @@ internal static class Program
             return;
         }
 
+        string configuredGame = GetRequired(config, "game");
         string configuredBackend = GetRequired(config, "backend");
         string configuredTitle = GetRequired(config, "title");
+        string configuredIcon = GetOptional(config, "icon");
         string configuredArguments = GetOptional(config, "arguments");
 
         if (configuredArguments.Length == 0)
             configuredArguments = "/SILENT";
 
-        if (!StringEquals(configuredBackend, approved.Backend))
+        if (configuredIcon.Length == 0)
+            configuredIcon = approved.IconPath;
+
+        if (!StringEquals(configuredGame, approved.Game))
+        {
+            ShowError(
+                "Launcher configuration does not match the approved game id.\n\n" +
+                "Expected: " + approved.Game + "\n" +
+                "Configured: " + configuredGame,
+                approved.Title
+            );
+            return;
+        }
+
+        if (!StringEquals(Path.GetFileName(configuredBackend), approved.BackendFileName))
         {
             ShowError(
                 "Launcher configuration does not match the approved backend.\n\n" +
-                "Expected: " + approved.Backend + "\n" +
+                "Expected: " + approved.BackendFileName + "\n" +
                 "Configured: " + configuredBackend,
                 approved.Title
             );
@@ -105,6 +154,17 @@ internal static class Program
             return;
         }
 
+        if (!StringEquals(configuredIcon, approved.IconPath))
+        {
+            ShowError(
+                "Launcher configuration does not match the approved icon.\n\n" +
+                "Expected: " + approved.IconPath + "\n" +
+                "Configured: " + configuredIcon,
+                approved.Title
+            );
+            return;
+        }
+
         if (!StringEquals(configuredArguments, "/SILENT"))
         {
             ShowError(
@@ -116,11 +176,19 @@ internal static class Program
             return;
         }
 
-        string backendPath = Path.Combine(backendDir, approved.Backend);
+        string backendPath = ResolveRelativePath(launcherDir, configuredBackend);
 
         if (!File.Exists(backendPath))
         {
             ShowError("Installer backend was not found.\n\nMissing:\n" + backendPath, approved.Title);
+            return;
+        }
+
+        string iconPath = ResolveRelativePath(launcherDir, configuredIcon);
+
+        if (!File.Exists(iconPath))
+        {
+            ShowError("Launcher icon was not found.\n\nMissing:\n" + iconPath, approved.Title);
             return;
         }
 
@@ -145,7 +213,7 @@ internal static class Program
             {
                 FileName = backendPath,
                 Arguments = finalArguments,
-                WorkingDirectory = backendDir,
+                WorkingDirectory = Path.GetDirectoryName(backendPath) ?? launcherDir,
                 UseShellExecute = true
             };
 
@@ -173,6 +241,16 @@ internal static class Program
             return null;
 
         return dialog.SelectedPath;
+    }
+
+    private static string ResolveRelativePath(string baseDir, string path)
+    {
+        string cleanPath = path.Trim().Trim('"');
+
+        if (Path.IsPathRooted(cleanPath))
+            return cleanPath;
+
+        return Path.GetFullPath(Path.Combine(baseDir, cleanPath));
     }
 
     private static string QuoteArgument(string value)

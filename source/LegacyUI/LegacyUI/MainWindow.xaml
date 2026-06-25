@@ -8,6 +8,66 @@
         ResizeMode="NoResize"
         Background="#101014">
 
+    <Window.Resources>
+        <Style x:Key="MoviesPatchCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border x:Name="Box"
+                                    Width="22"
+                                    Height="22"
+                                    CornerRadius="5"
+                                    Background="#101014"
+                                    BorderBrush="#FF9A32"
+                                    BorderThickness="2"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Left"/>
+
+                            <Path x:Name="CheckMark"
+                                  Data="M 5 11 L 9 15 L 17 6"
+                                  Stroke="#FF9A32"
+                                  StrokeThickness="3"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Visibility="Collapsed"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Left"/>
+
+                            <ContentPresenter Grid.Column="1"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="#33201008"/>
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#FFC06F"/>
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid x:Name="RootGrid" Background="#101014">
 
         <Image x:Name="BackgroundImage"
@@ -106,6 +166,56 @@
                                         Click="BrowseButton_Click"/>
                             </Grid>
                         </StackPanel>
+
+                        <!-- Standalone NFSUC-only MOVIES option page.
+     Hidden by default; MainWindow.xaml.cs will show it only for nfsuc. -->
+                        <Border x:Name="MoviesPatchPanel"
+                                Visibility="Collapsed"
+                                Width="470"
+                                Height="155"
+                                Margin="0,8,0,16"
+                                Padding="14"
+                                CornerRadius="14"
+                                Background="#AA111118"
+                                BorderBrush="#FF9A32"
+                                BorderThickness="1.5">
+
+                            <StackPanel>
+                                <TextBlock x:Name="MoviesPatchTitleText"
+                                           Text="Undercover MOVIES Patch"
+                                           Foreground="White"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8"/>
+
+                                <TextBlock x:Name="MoviesPatchIntroText"
+                                           Text="Optional Filter-Off MOVIES package for clearer FMV playback."
+                                           Foreground="#DADAEA"
+                                           FontSize="13"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,12"/>
+
+                                <Border CornerRadius="10"
+                                        Background="#55160D06"
+                                        BorderBrush="#9F632E"
+                                        BorderThickness="1"
+                                        Padding="12"
+                                        Margin="0,0,0,10">
+
+                                    <CheckBox x:Name="MoviesPatchCheckBox"
+                                              IsChecked="True"
+                                              Style="{StaticResource MoviesPatchCheckBoxStyle}"
+                                              Content="Install Filter-Off MOVIES patch"/>
+                                </Border>
+
+                                <TextBlock x:Name="MoviesPatchDescriptionText"
+                                           Text="Not an HD upscale. Removes the vanilla movie filter/tint."
+                                           Foreground="#B9B9C8"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,0"/>
+                            </StackPanel>
+                        </Border>
 
                         <TextBlock x:Name="ActivityText"
                                    Text="Preparing file operations..."

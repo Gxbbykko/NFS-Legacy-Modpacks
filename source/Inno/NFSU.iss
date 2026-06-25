@@ -3,9 +3,15 @@
 #define MyAppPublisher "Gxbbykko"
 #define MyOutputName "UndergroundMP"
 
+#define GameId "nfsu"
 #define GameExe "Speed.exe"
 #define ArchiveName "NFSU.arc"
 #define TempExtractFolder "UndergroundLegacy_Extract"
+
+#define ProjectRoot "C:\Users\Gabriel\Desktop\NFSU_Modpack"
+#define InstallerProject AddBackslash(ProjectRoot) + "InstallerProject"
+#define ToolsDir AddBackslash(InstallerProject) + "Tools"
+#define ImagesDir AddBackslash(InstallerProject) + "Images"
 
 [Setup]
 AppId={{6E2E96A4-8A9A-45F9-BD76-5514E2D1A140}
@@ -13,43 +19,53 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={code:GetDefaultDir}
-DisableProgramGroupPage=yes
-DisableReadyMemo=no
-DisableReadyPage=no
-OutputDir=.
+UsePreviousAppDir=no
+OutputDir={#ProjectRoot}
 OutputBaseFilename={#MyOutputName}
+
 Compression=none
 SolidCompression=no
 WizardStyle=modern
-WizardImageFile=C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Images\wizard.bmp
-WizardSmallImageFile=C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Images\header.bmp
-SetupIconFile=C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Images\NFSU_icon.ico
+
+DisableWelcomePage=yes
+DisableDirPage=yes
+DisableReadyPage=yes
+DisableReadyMemo=no
+DisableFinishedPage=yes
+DisableProgramGroupPage=yes
+AlwaysShowComponentsList=no
+
+WizardImageFile={#ImagesDir}\wizard.bmp
+WizardSmallImageFile={#ImagesDir}\header.bmp
+SetupIconFile={#ImagesDir}\NFSU_icon.ico
+
 Uninstallable=yes
-CreateUninstallRegKey=no
+CreateUninstallRegKey=yes
 UninstallFilesDir={app}\_LegacyInstaller
 UninstallDisplayName=Underground Legacy Modpack Restore Tool
 
 [Files]
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\arc.exe"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\NFSU.arc"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\Splash.exe"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Images\splash.png"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\ArcRunner.exe"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\LegacyUI.exe"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\D3DCompiler_47_cor3.dll"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\PenImc_cor3.dll"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\PresentationNative_cor3.dll"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\vcruntime140_cor3.dll"; Flags: dontcopy
-Source: "C:\Users\Gabriel\Desktop\NFSU_Modpack\InstallerProject\Tools\wpfgfx_cor3.dll"; Flags: dontcopy
+Source: "{#ToolsDir}\arc.exe"; Flags: dontcopy
+Source: "{#ToolsDir}\ArcRunner.exe"; Flags: dontcopy
+Source: "{#ToolsDir}\Splash.exe"; Flags: dontcopy
+Source: "{#ImagesDir}\splash.png"; Flags: dontcopy
+Source: "{#InstallerProject}\{#ArchiveName}"; Flags: dontcopy
+
+Source: "{#ToolsDir}\LegacyUI\*"; DestDir: "{tmp}\LegacyUI"; Flags: dontcopy recursesubdirs createallsubdirs noencryption
+Source: "{#ToolsDir}\LegacyUI\*"; DestDir: "{app}\_LegacyInstaller\LegacyUI"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{app}\_LegacyInstaller\Restore Underground Legacy Modpack"; Filename: "{app}\_LegacyInstaller\LegacyUI\LegacyUI.exe"; Parameters: "--target ""{app}"" --mode uninstall --game {#GameId}"; WorkingDir: "{app}\_LegacyInstaller\LegacyUI"; IconFilename: "{app}\_LegacyInstaller\LegacyUI\LegacyUI.exe"
 
 [Code]
 
 var
-  UserAcceptedUnsafeInstall: Boolean;
   ExtractLogMemo: TNewMemo;
   LegacyUIResultCode: Integer;
   LegacyUIStatePath: String;
   LegacyUICommandPath: String;
+  LegacyUITargetPath: String;
+  InstallAbortRequested: Boolean;
 
 function GetDefaultDir(Param: String): String;
 begin
@@ -63,74 +79,30 @@ begin
     Result := 'C:\Games\Need for Speed - Underground';
 end;
 
-function FileSizeMatches(FileName: String; ExpectedSize: Integer): Boolean;
-var
-  Size: Integer;
+function GetLauncherDirParam(): String;
 begin
-  Result := False;
+  Result := ExpandConstant('{param:DIR|}');
 
-  if not FileExists(FileName) then
+  if Result <> '' then
+  begin
+    StringChangeEx(Result, '"', '', True);
+    Result := RemoveBackslashUnlessRoot(Result);
+  end;
+end;
+
+function GetActiveInstallDir(): String;
+begin
+  if LegacyUITargetPath <> '' then
+  begin
+    Result := LegacyUITargetPath;
     Exit;
+  end;
 
-  if FileSize(FileName, Size) then
-    Result := Size = ExpectedSize;
-end;
-
-function RequiredFolderExists(BaseDir, FolderName: String): Boolean;
-begin
-  Result := DirExists(AddBackslash(BaseDir) + FolderName);
-end;
-
-function IsLargeAddressAware(ExePath: String): Boolean;
-var
-  ResultCode: Integer;
-  PSCommand: String;
-begin
-  Result := False;
-
-  PSCommand :=
-    '-NoProfile -ExecutionPolicy Bypass -Command "' +
-    '$bytes=[System.IO.File]::ReadAllBytes(''' + ExePath + ''');' +
-    '$pe=[BitConverter]::ToInt32($bytes,0x3C);' +
-    '$off=$pe+4+18;' +
-    '$ch=[BitConverter]::ToUInt16($bytes,$off);' +
-    'if(($ch -band 0x20) -ne 0){exit 0}else{exit 1}"';
-
-  if Exec(
-    ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-    PSCommand,
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ResultCode
-  ) then
-    Result := (ResultCode = 0);
-end;
-
-function IsNFSUInstallReady(BaseDir: String): Boolean;
-var
-  ExePath: String;
-begin
-  Result := False;
-
-  ExePath := AddBackslash(BaseDir) + '{#GameExe}';
-
-  if not FileExists(ExePath) then Exit;
-  if not FileSizeMatches(ExePath, 3178496) then Exit;
-  if not IsLargeAddressAware(ExePath) then Exit;
-
-  if not FileSizeMatches(AddBackslash(BaseDir) + 'FrontEnd\FrontB.lzc', 4182578) then Exit;
-  if not FileSizeMatches(AddBackslash(BaseDir) + 'Global\GlobalB.lzc', 972201) then Exit;
-  if not FileSizeMatches(AddBackslash(BaseDir) + 'Global\InGameB.lzc', 468419) then Exit;
-  if not FileSizeMatches(AddBackslash(BaseDir) + 'Languages\LANGUAGE_ENGLISH.bin', 159280) then Exit;
-
-  if not RequiredFolderExists(BaseDir, 'Cars') then Exit;
-  if not RequiredFolderExists(BaseDir, 'FrontEnd') then Exit;
-  if not RequiredFolderExists(BaseDir, 'Global') then Exit;
-  if not RequiredFolderExists(BaseDir, 'Languages') then Exit;
-  if not RequiredFolderExists(BaseDir, 'Tracks') then Exit;
-
-  Result := True;
+  try
+    Result := WizardDirValue();
+  except
+    Result := GetDefaultDir('');
+  end;
 end;
 
 function GetInstallerErrorFolder(): String;
@@ -152,23 +124,286 @@ begin
     LogFile,
     'Underground Legacy Modpack installation error'#13#10 +
     'Timestamp: ' + GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':') + #13#10 +
-    'Selected game folder: ' + ExpandConstant('{app}') + #13#10 +
+    'Selected game folder: ' + GetActiveInstallDir() + #13#10 +
     'Error: ' + ErrorText + #13#10,
     False
   );
 end;
 
-procedure CreateExtractLogBox;
+procedure TerminateProcessByName(ProcessName: String);
+var
+  ResultCode: Integer;
 begin
-  ExtractLogMemo := TNewMemo.Create(WizardForm);
-  ExtractLogMemo.Parent := WizardForm.InstallingPage;
-  ExtractLogMemo.Left := WizardForm.ProgressGauge.Left;
-  ExtractLogMemo.Top := WizardForm.ProgressGauge.Top + WizardForm.ProgressGauge.Height + 12;
-  ExtractLogMemo.Width := WizardForm.ProgressGauge.Width;
-  ExtractLogMemo.Height := 170;
-  ExtractLogMemo.ScrollBars := ssVertical;
-  ExtractLogMemo.ReadOnly := True;
-  ExtractLogMemo.Visible := True;
+  Exec(
+    ExpandConstant('{cmd}'),
+    '/C taskkill /F /IM "' + ProcessName + '"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
+procedure KillInstallerProcesses();
+begin
+  TerminateProcessByName('ArcRunner.exe');
+  TerminateProcessByName('arc.exe');
+end;
+
+procedure KillAllFrontendBackendProcesses();
+begin
+  TerminateProcessByName('ArcRunner.exe');
+  TerminateProcessByName('arc.exe');
+  TerminateProcessByName('LegacyUI.exe');
+end;
+
+procedure WriteLegacyUIState(Phase, Progress, Message: String);
+var
+  StateText: String;
+  StateDir: String;
+begin
+  if LegacyUIStatePath = '' then
+  begin
+    StateDir := AddBackslash(GetActiveInstallDir()) + '_LegacyInstaller';
+    ForceDirectories(StateDir);
+    LegacyUIStatePath := AddBackslash(StateDir) + 'legacyui_state.ini';
+  end
+  else
+  begin
+    StateDir := ExtractFileDir(LegacyUIStatePath);
+    ForceDirectories(StateDir);
+  end;
+
+  StateText :=
+    'phase=' + Phase + #13#10 +
+    'progress=' + Progress + #13#10 +
+    'message=' + Message + #13#10;
+
+  if FileExists(LegacyUIStatePath) then
+    DeleteFile(LegacyUIStatePath);
+
+  if not SaveStringToFile(LegacyUIStatePath, StateText, False) then
+    CreateErrorReport('Failed to write LegacyUI state file: ' + LegacyUIStatePath);
+end;
+
+function ReadCommandValue(CommandText, KeyName: String): String;
+var
+  Text: String;
+  Line: String;
+  Prefix: String;
+  P: Integer;
+begin
+  Result := '';
+  Prefix := KeyName + '=';
+
+  Text := CommandText;
+  StringChangeEx(Text, #13#10, #10, True);
+  StringChangeEx(Text, #13, #10, True);
+
+  while Length(Text) > 0 do
+  begin
+    P := Pos(#10, Text);
+
+    if P > 0 then
+    begin
+      Line := Copy(Text, 1, P - 1);
+      Delete(Text, 1, P);
+    end
+    else
+    begin
+      Line := Text;
+      Text := '';
+    end;
+
+    if Pos(Prefix, Line) = 1 then
+    begin
+      Result := Copy(Line, Length(Prefix) + 1, Length(Line));
+      Exit;
+    end;
+  end;
+end;
+
+function WaitForLegacyUIInstallCommand(): Boolean;
+var
+  CommandAnsi: AnsiString;
+  CommandText: String;
+  CommandValue: String;
+  TargetValue: String;
+  WaitMs: Integer;
+begin
+  Result := False;
+  WaitMs := 0;
+
+  while WaitMs < 120000 do
+  begin
+    Sleep(300);
+    WaitMs := WaitMs + 300;
+
+    if not FileExists(LegacyUICommandPath) then
+      Continue;
+
+    if not LoadStringFromFile(LegacyUICommandPath, CommandAnsi) then
+      Continue;
+
+    CommandText := String(CommandAnsi);
+    CommandValue := ReadCommandValue(CommandText, 'command');
+
+    if CompareText(CommandValue, 'exit') = 0 then
+    begin
+      WriteLegacyUIState('error', '100', 'Installation was cancelled before file operations started.');
+      CreateErrorReport('LegacyUI closed before install command.');
+      Exit;
+    end;
+
+    if CompareText(CommandValue, 'abort') = 0 then
+    begin
+      WriteLegacyUIState('error', '100', 'Installation was aborted before file operations started.');
+      CreateErrorReport('LegacyUI aborted before install command.');
+      Exit;
+    end;
+
+    if CompareText(CommandValue, 'install') = 0 then
+    begin
+      TargetValue := ReadCommandValue(CommandText, 'target');
+
+      if TargetValue = '' then
+      begin
+        WriteLegacyUIState('error', '100', 'LegacyUI install command missing target path.');
+        CreateErrorReport('LegacyUI install command missing target path.');
+        Exit;
+      end;
+
+      LegacyUITargetPath := RemoveBackslashUnlessRoot(TargetValue);
+
+      if not DirExists(LegacyUITargetPath) then
+      begin
+        WriteLegacyUIState('error', '100', 'Selected target folder does not exist.');
+        CreateErrorReport('Selected target folder does not exist: ' + LegacyUITargetPath);
+        Exit;
+      end;
+
+      WriteLegacyUIState('preparing', '8', 'Install command received. Preparing backend operations...');
+      Result := True;
+      Exit;
+    end;
+  end;
+
+  WriteLegacyUIState('error', '100', 'LegacyUI did not send an install command within 120 seconds.');
+  CreateErrorReport('LegacyUI command timeout.');
+end;
+
+procedure LaunchLegacyUI;
+var
+  Params: String;
+  BridgeDir: String;
+  LegacyUIExe: String;
+  ExtractedCount: Integer;
+begin
+  BridgeDir := ExpandConstant('{tmp}\LegacyUIBridge');
+  ForceDirectories(BridgeDir);
+
+  LegacyUIStatePath := AddBackslash(BridgeDir) + 'legacyui_state.ini';
+  LegacyUICommandPath := AddBackslash(BridgeDir) + 'legacyui_command.ini';
+
+  if FileExists(LegacyUICommandPath) then
+    DeleteFile(LegacyUICommandPath);
+
+  WriteLegacyUIState('preparing', '5', 'Extracting LegacyUI runtime...');
+
+  ExtractedCount := ExtractTemporaryFiles('{tmp}\LegacyUI\*');
+
+  if ExtractedCount <= 0 then
+  begin
+    CreateErrorReport('Failed to extract LegacyUI runtime folder.');
+    RaiseException('Failed to extract LegacyUI runtime folder.');
+  end;
+
+  LegacyUIExe := ExpandConstant('{tmp}\LegacyUI\LegacyUI.exe');
+
+  if not FileExists(LegacyUIExe) then
+  begin
+    CreateErrorReport('LegacyUI.exe was not found after runtime extraction: ' + LegacyUIExe);
+    RaiseException('LegacyUI.exe was not found after runtime extraction.');
+  end;
+
+  WriteLegacyUIState('preparing', '5', 'Waiting for LegacyUI install confirmation...');
+
+  Params :=
+    '--target "' + GetActiveInstallDir() + '" ' +
+    '--mode install ' +
+    '--game {#GameId} ' +
+    '--state "' + LegacyUIStatePath + '" ' +
+    '--command "' + LegacyUICommandPath + '"';
+
+  if not Exec(
+    LegacyUIExe,
+    Params,
+    ExpandConstant('{tmp}\LegacyUI'),
+    SW_SHOW,
+    ewNoWait,
+    LegacyUIResultCode
+  ) then
+  begin
+    CreateErrorReport('Failed to launch LegacyUI.exe from runtime folder.');
+    RaiseException('Failed to launch LegacyUI.exe.');
+  end;
+end;
+
+procedure HideInnoWizard;
+begin
+  try
+    WizardForm.Hide;
+  except
+  end;
+end;
+
+procedure RunSplash;
+var
+  ResultCode: Integer;
+begin
+  ExtractTemporaryFile('Splash.exe');
+  ExtractTemporaryFile('splash.png');
+
+  Exec(
+    ExpandConstant('{tmp}\Splash.exe'),
+    '"' + ExpandConstant('{tmp}\splash.png') + '"',
+    '',
+    SW_SHOW,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
+procedure InitializeWizard;
+begin
+  InstallAbortRequested := False;
+
+  LegacyUITargetPath := GetLauncherDirParam();
+
+  if LegacyUITargetPath = '' then
+    LegacyUITargetPath := GetDefaultDir('');
+
+  HideInnoWizard;
+  RunSplash;
+  HideInnoWizard;
+
+  LaunchLegacyUI;
+
+  if not WaitForLegacyUIInstallCommand() then
+  begin
+    WriteLegacyUIState('error', '100', 'Installation cancelled before file operations started.');
+    CreateErrorReport('LegacyUI did not provide install command.');
+    KillAllFrontendBackendProcesses;
+    Abort;
+  end;
+
+  WizardForm.DirEdit.Text := LegacyUITargetPath;
+  HideInnoWizard;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
 end;
 
 function CleanLogText(S: String): String;
@@ -192,6 +427,9 @@ var
 begin
   Result := 0;
   Dir := RemoveBackslashUnlessRoot(Dir);
+
+  if not DirExists(Dir) then
+    Exit;
 
   if FindFirst(Dir + '\*', FindRec) then
   begin
@@ -233,65 +471,180 @@ begin
   end;
 end;
 
-procedure WriteLegacyUIState(Phase, Progress, Message: String);
-var
-  StateText: String;
-  StateDir: String;
+function GetRestoreDataDir(GameDir: String): String;
 begin
-  StateDir := AddBackslash(ExpandConstant('{app}')) + '_LegacyInstaller';
-  ForceDirectories(StateDir);
-
-  LegacyUIStatePath := AddBackslash(StateDir) + 'legacyui_state.ini';
-
-  StateText :=
-    'phase=' + Phase + #13#10 +
-    'progress=' + Progress + #13#10 +
-    'message=' + Message + #13#10;
-
-  if FileExists(LegacyUIStatePath) then
-    DeleteFile(LegacyUIStatePath);
-
-  if not SaveStringToFile(LegacyUIStatePath, StateText, False) then
-    CreateErrorReport('Failed to write LegacyUI state file: ' + LegacyUIStatePath);
+  Result := AddBackslash(GameDir) + '_LegacyInstaller\RestoreData';
 end;
 
-procedure LaunchLegacyUI;
-var
-  Params: String;
-  LegacyDir: String;
+function GetBackupDir(GameDir: String): String;
 begin
-  ExtractTemporaryFile('LegacyUI.exe');
-  ExtractTemporaryFile('D3DCompiler_47_cor3.dll');
-  ExtractTemporaryFile('PenImc_cor3.dll');
-  ExtractTemporaryFile('PresentationNative_cor3.dll');
-  ExtractTemporaryFile('vcruntime140_cor3.dll');
-  ExtractTemporaryFile('wpfgfx_cor3.dll');
+  Result := AddBackslash(GetRestoreDataDir(GameDir)) + 'Backup';
+end;
 
-  LegacyDir := AddBackslash(WizardDirValue()) + '_LegacyInstaller';
-  ForceDirectories(LegacyDir);
+procedure SetRestoreDataAttributes(GameDir: String);
+var
+  ResultCode: Integer;
+  RestoreDataDir: String;
+begin
+  RestoreDataDir := GetRestoreDataDir(GameDir);
 
-  LegacyUIStatePath := AddBackslash(LegacyDir) + 'legacyui_state.ini';
-  LegacyUICommandPath := AddBackslash(LegacyDir) + 'legacyui_command.ini';
+  if DirExists(RestoreDataDir) then
+  begin
+    Exec(
+      ExpandConstant('{cmd}'),
+      '/C attrib +H +S +R "' + RestoreDataDir + '" /S /D',
+      '',
+      SW_HIDE,
+      ewWaitUntilTerminated,
+      ResultCode
+    );
+  end;
+end;
 
-  if FileExists(LegacyUICommandPath) then
-    DeleteFile(LegacyUICommandPath);
+procedure UnlockRestoreDataAttributes(GameDir: String);
+var
+  ResultCode: Integer;
+  RestoreDataDir: String;
+begin
+  RestoreDataDir := GetRestoreDataDir(GameDir);
 
-  WriteLegacyUIState('preparing', '5', 'Preparing installation environment...');
+  if DirExists(RestoreDataDir) then
+  begin
+    Exec(
+      ExpandConstant('{cmd}'),
+      '/C attrib -H -S -R "' + RestoreDataDir + '" /S /D',
+      '',
+      SW_HIDE,
+      ewWaitUntilTerminated,
+      ResultCode
+    );
+  end;
+end;
 
-  Params :=
-    '--target "' + WizardDirValue() + '" ' +
-    '--mode install ' +
-    '--state "' + LegacyUIStatePath + '" ' +
-    '--command "' + LegacyUICommandPath + '"';
+function FilesAreSame(SourceFile, DestFile: String): Boolean;
+var
+  SourceSize: Integer;
+  DestSize: Integer;
+  ResultCode: Integer;
+  SourceHashAnsi: AnsiString;
+  DestHashAnsi: AnsiString;
+  SourceHash: String;
+  DestHash: String;
+begin
+  Result := False;
+
+  if not FileExists(SourceFile) then Exit;
+  if not FileExists(DestFile) then Exit;
+
+  if not FileSize(SourceFile, SourceSize) then Exit;
+  if not FileSize(DestFile, DestSize) then Exit;
+
+  if SourceSize <> DestSize then Exit;
 
   Exec(
-    ExpandConstant('{tmp}\LegacyUI.exe'),
-    Params,
-    ExpandConstant('{tmp}'),
-    SW_SHOW,
-    ewNoWait,
-    LegacyUIResultCode
+    ExpandConstant('{cmd}'),
+    '/C certutil -hashfile "' + SourceFile + '" SHA256 | find /v "hash" | find /v "CertUtil" > "' + ExpandConstant('{tmp}\source_hash.txt') + '"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
   );
+
+  Exec(
+    ExpandConstant('{cmd}'),
+    '/C certutil -hashfile "' + DestFile + '" SHA256 | find /v "hash" | find /v "CertUtil" > "' + ExpandConstant('{tmp}\dest_hash.txt') + '"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+
+  if not LoadStringFromFile(ExpandConstant('{tmp}\source_hash.txt'), SourceHashAnsi) then Exit;
+  if not LoadStringFromFile(ExpandConstant('{tmp}\dest_hash.txt'), DestHashAnsi) then Exit;
+
+  SourceHash := Trim(String(SourceHashAnsi));
+  DestHash := Trim(String(DestHashAnsi));
+
+  Result := CompareText(SourceHash, DestHash) = 0;
+end;
+
+function BackupOriginalIfChanged(SourcePath, DestPath, BaseSourceDir, GameDir: String): Boolean;
+var
+  RelPath: String;
+  BackupPath: String;
+begin
+  Result := True;
+
+  if not FileExists(DestPath) then
+    Exit;
+
+  if FilesAreSame(SourcePath, DestPath) then
+    Exit;
+
+  RelPath := Copy(SourcePath, Length(BaseSourceDir) + 2, Length(SourcePath));
+  BackupPath := AddBackslash(GetBackupDir(GameDir)) + RelPath;
+
+  ForceDirectories(ExtractFileDir(BackupPath));
+
+  MakeWritable(DestPath);
+
+  if not CopyFile(DestPath, BackupPath, False) then
+  begin
+    CreateErrorReport('Failed to backup original file: ' + DestPath + ' -> ' + BackupPath);
+    Result := False;
+    Exit;
+  end;
+end;
+
+procedure CreateExtractLogBox;
+begin
+  ExtractLogMemo := TNewMemo.Create(WizardForm);
+  ExtractLogMemo.Parent := WizardForm.InstallingPage;
+  ExtractLogMemo.Left := WizardForm.ProgressGauge.Left;
+  ExtractLogMemo.Top := WizardForm.ProgressGauge.Top + WizardForm.ProgressGauge.Height + 12;
+  ExtractLogMemo.Width := WizardForm.ProgressGauge.Width;
+  ExtractLogMemo.Height := 170;
+  ExtractLogMemo.ScrollBars := ssVertical;
+  ExtractLogMemo.ReadOnly := True;
+  ExtractLogMemo.Visible := False;
+end;
+
+function LegacyUIAbortRequested(): Boolean;
+var
+  CommandText: AnsiString;
+  CommandValue: String;
+begin
+  Result := False;
+
+  if FileExists(LegacyUICommandPath) then
+  begin
+    if LoadStringFromFile(LegacyUICommandPath, CommandText) then
+    begin
+      CommandValue := ReadCommandValue(String(CommandText), 'command');
+
+      if (CompareText(CommandValue, 'abort') = 0) or
+         (CompareText(CommandValue, 'exit') = 0) then
+      begin
+        InstallAbortRequested := True;
+        Result := True;
+      end;
+    end;
+  end;
+end;
+
+procedure AbortInstallAndCleanTemp();
+var
+  TempExtractPath: String;
+begin
+  TempExtractPath := ExpandConstant('{tmp}\{#TempExtractFolder}');
+
+  KillInstallerProcesses;
+
+  if DirExists(TempExtractPath) then
+    DelTree(TempExtractPath, True, True, True);
+
+  WriteLegacyUIState('error', '100', 'Installation cancelled. Temporary files were cleaned.');
+  CreateErrorReport('Installation cancelled during archive extraction.');
 end;
 
 function ExtractArchiveToTemp(): Boolean;
@@ -339,10 +692,6 @@ begin
 
   CreateExtractLogBox;
 
-  WizardForm.StatusLabel.Caption := 'Installing Underground Legacy Modpack...';
-  WizardForm.FilenameLabel.Caption := 'Extracting archive silently. Please wait...';
-  WizardForm.Refresh;
-
   if not Exec(ArcRunnerExe, Params, '', SW_HIDE, ewNoWait, ResultCode) then
   begin
     WriteLegacyUIState('error', '100', 'Failed to launch archive extraction helper.');
@@ -353,8 +702,14 @@ begin
   repeat
     Sleep(300);
 
+    if LegacyUIAbortRequested() then
+    begin
+      AbortInstallAndCleanTemp();
+      Exit;
+    end;
+
     ExtractedSize := GetDirectorySize(TempExtractPath);
-    ProgressPercent := Integer((ExtractedSize div 48268165));
+    ProgressPercent := Integer(ExtractedSize div 48268165);
 
     if ProgressPercent > 99 then
       ProgressPercent := 99;
@@ -363,11 +718,6 @@ begin
       ProgressPercent := 20;
 
     WriteLegacyUIState('extracting', IntToStr(ProgressPercent), 'Extracting archive payload...');
-
-    WizardForm.ProgressGauge.Position := ProgressPercent;
-    WizardForm.StatusLabel.Caption := 'Installing Underground Legacy Modpack...';
-    WizardForm.FilenameLabel.Caption :=
-      'Extracting archive silently. Estimated progress: ' + IntToStr(ProgressPercent) + '%';
 
     if FileExists(LogPath) then
     begin
@@ -383,17 +733,8 @@ begin
         end;
       end;
     end;
-
-    WizardForm.Refresh;
-
   until (Pos('arc.exe exit code:', String(LogText)) > 0) or
         (Pos('All OK', String(LogText)) > 0);
-
-  WizardForm.ProgressGauge.Position := 100;
-  WizardForm.StatusLabel.Caption := 'Extraction completed successfully.';
-  WizardForm.FilenameLabel.Caption := 'Preparing files for installation...';
-  WizardForm.Refresh;
-  Sleep(700);
 
   if (Pos('arc.exe exit code: 0', String(LogText)) = 0) and
      (Pos('All OK', String(LogText)) = 0) then
@@ -414,7 +755,7 @@ begin
     (Pos('_LegacyInstaller\', RelPath) = 1);
 end;
 
-function CopyDirectoryRecursive(SourceDir, DestDir, BaseSourceDir, ManifestPath: String): Boolean;
+function CopyDirectoryRecursive(SourceDir, DestDir, BaseSourceDir, ManifestPath, NewFilesManifestPath, GameDir: String): Boolean;
 var
   FindRec: TFindRec;
   SourcePath: String;
@@ -440,7 +781,7 @@ begin
 
           if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
           begin
-            if not CopyDirectoryRecursive(SourcePath, DestPath, BaseSourceDir, ManifestPath) then
+            if not CopyDirectoryRecursive(SourcePath, DestPath, BaseSourceDir, ManifestPath, NewFilesManifestPath, GameDir) then
             begin
               Result := False;
               Exit;
@@ -448,8 +789,21 @@ begin
           end
           else
           begin
-            if FileExists(DestPath) then
+            RelPath := Copy(SourcePath, Length(BaseSourceDir) + 2, Length(SourcePath));
+
+            if not FileExists(DestPath) then
             begin
+              if not ShouldSkipManifest(RelPath) then
+                SaveStringToFile(NewFilesManifestPath, RelPath + #13#10, True);
+            end
+            else
+            begin
+              if not BackupOriginalIfChanged(SourcePath, DestPath, BaseSourceDir, GameDir) then
+              begin
+                Result := False;
+                Exit;
+              end;
+
               MakeWritable(DestPath);
 
               if not DeleteFile(DestPath) then
@@ -460,14 +814,14 @@ begin
               end;
             end;
 
+            ForceDirectories(ExtractFileDir(DestPath));
+
             if not CopyFile(SourcePath, DestPath, False) then
             begin
               CreateErrorReport('Failed to copy file: ' + SourcePath + ' -> ' + DestPath);
               Result := False;
               Exit;
             end;
-
-            RelPath := Copy(SourcePath, Length(BaseSourceDir) + 2, Length(SourcePath));
 
             if not ShouldSkipManifest(RelPath) then
               SaveStringToFile(ManifestPath, RelPath + #13#10, True);
@@ -485,33 +839,37 @@ var
   TempExtractPath: String;
   LegacyDir: String;
   ManifestPath: String;
+  NewFilesManifestPath: String;
 begin
   TempExtractPath := ExpandConstant('{tmp}\{#TempExtractFolder}');
-  LegacyDir := AddBackslash(WizardDirValue()) + '_LegacyInstaller';
+  LegacyDir := AddBackslash(GetActiveInstallDir()) + '_LegacyInstaller';
   ManifestPath := AddBackslash(LegacyDir) + 'install_manifest.txt';
+  NewFilesManifestPath := AddBackslash(LegacyDir) + 'new_files_manifest.txt';
 
   ForceDirectories(LegacyDir);
 
-  if FileExists(ManifestPath) then
-    DeleteFile(ManifestPath);
+  if FileExists(NewFilesManifestPath) then
+    DeleteFile(NewFilesManifestPath);
 
   WriteLegacyUIState('copying', '70', 'Copying extracted files into the game folder...');
 
-  WizardForm.StatusLabel.Caption := 'Installing modpack files...';
-  WizardForm.FilenameLabel.Caption := 'Copying extracted files into the game folder';
-
-  Result := CopyDirectoryRecursive(TempExtractPath, WizardDirValue(), TempExtractPath, ManifestPath);
+  Result := CopyDirectoryRecursive(
+    TempExtractPath,
+    GetActiveInstallDir(),
+    TempExtractPath,
+    ManifestPath,
+    NewFilesManifestPath,
+    GetActiveInstallDir()
+  );
 
   if Result then
-begin
-  WriteLegacyUIState('finalizing', '96', 'Writing rollback manifest and finalizing installation...');
-end
-else
-begin
-  WriteLegacyUIState('error', '100', 'File copy failed.');
-end;
-
-end;
+  begin
+    SetRestoreDataAttributes(GetActiveInstallDir());
+    WriteLegacyUIState('finalizing', '96', 'Writing rollback manifest and finalizing installation...');
+  end
+  else
+    WriteLegacyUIState('error', '100', 'File copy failed.');
+  end;    
 
 procedure RestoreBackupFiles(SourceDir, DestDir: String);
 var
@@ -635,22 +993,36 @@ begin
   end;
 end;
 
+procedure CleanupRollbackArtifacts(GameDir: String);
+var
+  RestoreDataDir: String;
+begin
+  RestoreDataDir := GetRestoreDataDir(GameDir);
+
+  if DirExists(RestoreDataDir) then
+    DelTree(RestoreDataDir, True, True, True);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   GameDir: String;
   BackupDir: String;
   LegacyDir: String;
   ManifestPath: String;
+  NewFilesManifestPath: String;
 begin
   if CurUninstallStep = usUninstall then
   begin
     GameDir := ExpandConstant('{app}');
-    BackupDir := AddBackslash(GameDir) + 'Backup';
+    UnlockRestoreDataAttributes(GameDir);
+    
+    BackupDir := GetBackupDir(GameDir);
     LegacyDir := AddBackslash(GameDir) + '_LegacyInstaller';
     ManifestPath := AddBackslash(LegacyDir) + 'install_manifest.txt';
+    NewFilesManifestPath := AddBackslash(LegacyDir) + 'new_files_manifest.txt';
 
     WriteLegacyUIState('removing', '25', 'Removing installed Underground Legacy Modpack files...');
-    DeleteFilesFromManifest(GameDir, ManifestPath);
+    DeleteFilesFromManifest(GameDir, NewFilesManifestPath);
 
     if DirExists(BackupDir) then
     begin
@@ -660,157 +1032,45 @@ begin
       WriteLegacyUIState('cleaning', '85', 'Cleaning empty folders and rollback leftovers...');
       RemoveEmptyDirectories(GameDir);
 
-      WriteLegacyUIState('complete', '100', 'Rollback complete. Original game files restored.');
+      WriteLegacyUIState('cleaning', '92', 'Removing rollback backup and LegacyUI runtime...');
+      CleanupRollbackArtifacts(GameDir);
 
-      MsgBox(
-        'Backup files were restored successfully.'#13#10#13#10 +
-        'Modpack-added files were removed using the install manifest.',
-        mbInformation,
-        MB_OK
-      );
+      WriteLegacyUIState('complete', '100', 'Rollback complete. Original game files restored.');
     end
     else
     begin
       WriteLegacyUIState('error', '100', 'Backup folder was not found. Restore could not complete.');
-
-      MsgBox(
-        'Backup folder was not found.'#13#10#13#10 +
-        'The uninstaller removed manifest files but could not restore original files.',
-        mbError,
-        MB_OK
-      );
     end;
   end;
 end;
-
-procedure RunSplash;
-var
-  ResultCode: Integer;
-begin
-  ExtractTemporaryFile('Splash.exe');
-  ExtractTemporaryFile('splash.png');
-
-  Exec(
-    ExpandConstant('{tmp}\Splash.exe'),
-    '"' + ExpandConstant('{tmp}\splash.png') + '"',
-    '',
-    SW_SHOW,
-    ewWaitUntilTerminated,
-    ResultCode
-  );
-end;
-
-procedure InitializeWizard;
-begin
-  UserAcceptedUnsafeInstall := False;
-  RunSplash;
-end;
-
-function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  MsgResult: Integer;
-begin
-  Result := True;
-
-  if CurPageID = wpSelectDir then
-  begin
-    if not IsNFSUInstallReady(WizardDirValue()) then
-    begin
-      MsgResult :=
-        MsgBox(
-          'Your game does not appear to be patched to the required state.'#13#10#13#10 +
-          '{#MyAppName} requires:'#13#10 +
-          '• Need for Speed Underground patched to v1.4'#13#10 +
-          '• {#GameExe} patched with 4GB / Large Address Aware'#13#10 +
-          '• A complete game installation with required v1.4 files'#13#10#13#10 +
-          'Installing anyway may break your game, cause crashes, missing textures, or failed startup.'#13#10#13#10 +
-          'YES = Continue anyway at your own risk'#13#10 +
-          'NO = Go back and patch the game first',
-          mbCriticalError,
-          MB_YESNO
-        );
-
-      if MsgResult = IDYES then
-      begin
-        UserAcceptedUnsafeInstall := True;
-        Result := True;
-      end
-      else
-      begin
-        Result := False;
-      end;
-    end;
-  end;
-end;
-
-procedure WaitForLegacyUIExitCommand;
-var
-  CommandText: AnsiString;
-begin
-  while True do
-  begin
-    Sleep(300);
-
-    if FileExists(LegacyUICommandPath) then
-    begin
-      if LoadStringFromFile(LegacyUICommandPath, CommandText) then
-      begin
-        if Pos('command=exit', String(CommandText)) > 0 then
-          Break;
-      end;
-    end;
-  end;
-end;
-
-procedure TerminateProcessByName(ProcessName: String);
-var
-  ResultCode: Integer;
-begin
-  Exec(
-    ExpandConstant('{cmd}'),
-    '/C taskkill /F /IM "' + ProcessName + '"',
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ResultCode
-  );
-end;
-
+ 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
+  HideInnoWizard;
+
   if CurStep = ssInstall then
   begin
-    LaunchLegacyUI;
-    WizardForm.Hide;
-
     if not ExtractArchiveToTemp() then
     begin
+      if InstallAbortRequested then
+      begin
+        WriteLegacyUIState('error', '100', 'Installation cancelled by user.');
+        KillAllFrontendBackendProcesses;
+        Abort;
+      end;
+
       WriteLegacyUIState('error', '100', 'Archive extraction failed.');
-
-      MsgBox(
-        'Archive extraction failed.'#13#10#13#10 +
-        'The game folder was not modified.'#13#10 +
-        'An error report was created next to the installer.',
-        mbError,
-        MB_OK
-      );
-
-      RaiseException('Extraction failed.');
+      CreateErrorReport('Archive extraction failed.');
+      KillInstallerProcesses;
+      Abort;
     end;
 
     if not CopyExtractedFilesToGame() then
     begin
       WriteLegacyUIState('error', '100', 'File copy failed.');
-
-      MsgBox(
-        'File copy failed.'#13#10#13#10 +
-        'Some files may not have been installed.'#13#10 +
-        'An error report was created next to the installer.',
-        mbError,
-        MB_OK
-      );
-
-      RaiseException('Copy failed.');
+      CreateErrorReport('File copy failed.');
+      KillInstallerProcesses;
+      Abort;
     end;
 
     WriteLegacyUIState('finalizing', '98', 'Finalizing installation state...');
@@ -818,14 +1078,11 @@ begin
 
   if CurStep = ssPostInstall then
   begin
+    HideInnoWizard;
     Sleep(1000);
 
     WriteLegacyUIState('complete', '100', 'Installation complete.');
-    WaitForLegacyUIExitCommand;
 
-    WizardForm.Close;
-    Sleep(500);
-    TerminateProcessByName('Setup.tmp');
-    TerminateProcessByName('{#MyOutputName}.tmp');
+    Sleep(3000);
   end;
 end;
