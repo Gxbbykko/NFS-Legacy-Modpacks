@@ -1,369 +1,303 @@
 # Build Notes
 
-This document describes the internal build process, repository workflow, validation standards, and installer architecture used for the **NFS Legacy Modpacks** project.
+This document describes the internal build workflow, project structure, validation methodology, and release standards used by **NFS Legacy Modpacks Release 2.0**.
 
-The goal of this documentation is to ensure reproducible builds, safe installation, deterministic rollback, and long-term maintainability across all supported Need for Speed titles.
+The objective is to guarantee reproducible builds, deterministic installation, deterministic rollback, and long-term maintainability across every supported Need for Speed title.
 
 ---
 
 # Project Philosophy
 
-The NFS Legacy Modpacks project focuses on:
+NFS Legacy Modpacks is built around the following engineering principles:
 
 * Reliable installation
-* Clean rollback
+* Deterministic rollback
 * Validation-first deployment
 * Preservation of original game installations
 * Reproducible builds
+* Shared installer architecture
 * Long-term maintainability
 
-Unlike traditional mod installers, uninstall integrity is treated as equally important as installation success.
+Unlike traditional game mod installers, installation and uninstallation are treated as equally important.
 
-Every release should be capable of returning the game to its exact pre-install state.
+Every build must be capable of restoring the original patched game installation.
 
 ---
 
 # Supported Games
 
-Current installer architecture supports:
+The Release 2.0 architecture supports every classic PC Need for Speed title.
 
-| Game                         | Status   |
-| ---------------------------- | -------- |
-| Need for Speed Underground   | Complete |
-| Need for Speed Underground 2 | Complete |
-| Need for Speed Most Wanted   | Complete |
-| Need for Speed Carbon        | Complete |
-| Need for Speed ProStreet     | Complete |
-| Need for Speed Undercover    | Complete |
+| Game                         | Status     |
+| ---------------------------- | ---------- |
+| Need for Speed Underground   | ✅ Complete |
+| Need for Speed Underground 2 | ✅ Complete |
+| Need for Speed Most Wanted   | ✅ Complete |
+| Need for Speed Carbon        | ✅ Complete |
+| Need for Speed ProStreet     | ✅ Complete |
+| Need for Speed Undercover    | ✅ Complete |
 
-All supported installers share the same rollback and validation architecture.
+Every title shares the same installer architecture, rollback engine, and validation methodology.
 
 ---
 
 # Required Software
 
-The following tools are required for local builds.
+The following components are required to build a release.
 
-## Required Applications
-
-### Inno Setup
-
-Used to compile installer scripts.
+## SetupLauncher
 
 Purpose:
 
-* Installer generation
-* Wizard interface
-* File deployment
-* Uninstall integration
-* Rollback orchestration
+* Launcher
+* Game selection
+* Installer bootstrap
+* Backend validation
+* AppId verification
 
 ---
 
-### FreeArc (`arc.exe`)
-
-Used to compress and extract modpack archives.
+## LegacyUI
 
 Purpose:
 
-* Payload compression
-* Reduced installer size
-* Archive extraction
+* Modern installer frontend
+* Installation interface
+* Progress reporting
+* Optional component handling
+* Backend communication
 
-Expected archive format:
+Published as a self-contained Release executable.
 
-```txt
+---
+
+## Inno Setup
+
+Purpose:
+
+* Backend installer
+* File deployment
+* Rollback engine
+* RestoreData generation
+* Uninstaller generation
+
+---
+
+## FreeArc
+
+Purpose:
+
+* High-compression archive format
+* Payload extraction
+
+Supported archive format:
+
+```text id="n20x5u"
 *.arc
 ```
 
 ---
 
-### ArcRunner.exe
-
-Wrapper process used to execute FreeArc silently while exposing extraction progress to the installer.
+## ArcRunner
 
 Purpose:
 
 * Silent extraction
-* Installer progress tracking
+* Progress monitoring
 * Log generation
-* Stable extraction handling
+* Extraction controller
 
 ---
 
-### Splash.exe
-
-Displays splash screen before installer initialization.
+## Splash
 
 Purpose:
 
+* Startup splash
 * Branding
-* User presentation
-* Installer identity
+* Installer presentation
 
 ---
 
-# Local Build Structure
+# Build Pipeline
 
-Each local installer project should follow the same structure.
+Every supported title follows the same build workflow.
 
-Expected layout:
+```text id="xg9mzf"
+SetupLauncher
+        │
+        ▼
+LegacyUI
+        │
+        ▼
+Backend (Inno Setup)
+        │
+        ▼
+ArcRunner
+        │
+        ▼
+FreeArc
+        │
+        ▼
+Installer
+```
 
-```txt
+---
+
+# Local Project Structure
+
+Each installer project follows the same layout.
+
+```text id="5azdc0"
 InstallerProject/
-├── Images/
-│   ├── wizard.bmp
-│   ├── header.bmp
-│   ├── splash.png
-│   └── game_icon.ico
 │
+├── Images/
 ├── Tools/
-│   ├── arc.exe
 │   ├── ArcRunner.exe
-│   └── Splash.exe
+│   ├── Splash.exe
+│   └── arc.exe
 │
 ├── GameArchive.arc
-│
 └── GAME.iss
 ```
 
-Example:
-
-```txt
-NFSMW_Modpack/
-├── InstallerProject/
-│   ├── Images/
-│   ├── Tools/
-│   ├── NFSMW.arc
-│   └── NFSMW.iss
-```
+The launcher is deployed alongside the installer while the backend executable is placed inside `_backend`.
 
 ---
 
-# Installer Architecture
+# Installer Workflow
 
-All installers use the same internal workflow.
+Every installer performs the following sequence.
 
-## Installation Flow
+## 1. Launcher
 
-### 1. Game Validation
+* SetupLauncher starts.
+* AppId verified.
+* Launcher configuration verified.
+* Backend validated.
 
-Installer validates:
+---
 
-* Correct executable exists
+## 2. LegacyUI
+
+* Installer interface displayed.
+* Game selected.
+* Installation configured.
+
+---
+
+## 3. Backend Validation
+
+The backend verifies:
+
+* Game executable
 * Expected executable size
-* Large Address Aware (4GB Patch) enabled
-* Required folders exist
-* Critical files match expected sizes
+* Latest official patch
+* Large Address Aware support
+* Required folders
+* Critical file sizes
 
-Purpose:
-
-* Prevent unsupported installs
-* Avoid broken mod states
-* Reduce user errors
+Unsupported installations are rejected before extraction begins.
 
 ---
 
-### 2. Temporary Extraction
+## 4. Archive Extraction
 
-Modpack payload is extracted into:
+ArcRunner launches FreeArc.
 
-```txt
-%TEMP%
-```
-
-Example:
-
-```txt
-MostWantedLegacy_Extract
-CarbonLegacy_Extract
-```
-
-Extraction uses:
-
-```txt
-arc.exe
-```
-
-through:
-
-```txt
-ArcRunner.exe
-```
-
-This allows:
-
-* Silent extraction
-* Progress reporting
-* Log capture
+Extraction occurs inside the temporary directory while providing progress information to LegacyUI.
 
 ---
 
-### 3. File Deployment
+## 5. File Deployment
 
-Files are copied from temporary extraction folders into the game installation directory.
+Extracted files are copied into the selected game installation.
 
-Installer preserves structure recursively.
-
-Example:
-
-```txt
-CARS\
-GLOBAL\
-FRONTEND\
-LANGUAGES\
-TRACKS\
-```
+The installer preserves directory structure and records installation metadata.
 
 ---
 
-### 4. Manifest Generation
+## 6. Rollback Metadata
 
-Every installed file is written into:
+The installer generates:
 
-```txt
-_LegacyInstaller/install_manifest.txt
+```text id="3xg1lw"
+_LegacyInstaller
+│
+├── install_manifest.txt
+├── new_files_manifest.txt
+└── RestoreData
+    └── Backup
 ```
 
-Purpose:
-
-* Exact uninstall tracking
-* File removal accuracy
-* Deterministic rollback
-
-Only modpack-installed files are recorded.
-
-Excluded:
-
-```txt
-Backup\
-_LegacyInstaller\
-```
+Only overwritten original files are backed up.
 
 ---
 
-### 5. Backup Restoration
+## 7. Uninstall Workflow
 
-During uninstall:
+Rollback follows the Release 2.0 sequence.
 
-1. Manifest files are removed
-2. Original files are restored from:
-
-```txt
-Backup\
+```text id="i8g6qx"
+Delete new files
+        │
+        ▼
+Restore overwritten originals
+        │
+        ▼
+Title-specific cleanup
+        │
+        ▼
+Remove empty directories
+        │
+        ▼
+Verification
 ```
-
-3. Empty folders are removed
-
-Result:
-
-Game returns to its original patched state.
-
----
-
-# Rollback Order
-
-The uninstall order is extremely important.
-
-Correct order:
-
-```txt
-1. Delete manifest files
-2. Restore Backup files
-3. Remove empty directories
-4. Final cleanup
-```
-
-Changing this order can break rollback validation.
 
 ---
 
 # Validation Workflow
 
-No build is considered complete without rollback validation.
+Every release must complete the following validation.
 
-Each release must pass SHA256 integrity testing.
-
-Validation consists of:
-
-## Step 1 — Baseline Snapshot
-
-Generate hash list before installation.
-
-Output:
-
-```txt
-baseline_vanilla.csv
+```text id="1dvs8o"
+Clean Patched Game
+        │
+        ▼
+Install
+        │
+        ▼
+Verify Gameplay
+        │
+        ▼
+Rollback
+        │
+        ▼
+Compare-Object
 ```
 
----
+Expected result:
 
-## Step 2 — Install Snapshot
-
-Generate hash list after installation.
-
-Output:
-
-```txt
-after_install.csv
-```
-
----
-
-## Step 3 — Uninstall Snapshot
-
-Generate hash list after uninstall.
-
-Output:
-
-```txt
-after_uninstall.csv
-```
-
----
-
-## Step 4 — Compare Results
-
-Example:
-
-```powershell
-$baseline = Import-Csv ".\baseline_vanilla.csv"
-$after = Import-Csv ".\after_uninstall.csv"
-
-Compare-Object `
--ReferenceObject $baseline `
--DifferenceObject $after `
--Property Path, Hash
-```
-
----
-
-## Expected Result
-
-Successful rollback validation returns:
-
-```txt
+```text id="pn9k9b"
 (no output)
 ```
 
 This confirms:
 
-* No missing files
-* No leftover files
-* No modified hashes
-* Successful restoration
+* Original files restored.
+* Modded files removed.
+* No remaining artifacts.
+* Installation restored to the clean patched reference.
 
 ---
 
 # Repository Rules
 
-The repository intentionally excludes:
+The repository intentionally excludes build artifacts and copyrighted content.
 
-## Forbidden Files
+## Never Commit
 
-Do **not** commit:
-
-```txt
+```text id="x6lybx"
 *.arc
 *.exe
 *.dll
@@ -376,10 +310,8 @@ Do **not** commit:
 
 ## Temporary Files
 
-Do **not** commit:
-
-```txt
-Backup/
+```text id="my2fdw"
+RestoreData/
 _LegacyInstaller/
 *_Extract/
 arc_progress.log
@@ -390,9 +322,7 @@ install_error.txt
 
 ## Validation Files
 
-Do **not** commit:
-
-```txt
+```text id="1e30c6"
 baseline_vanilla.csv
 after_install.csv
 after_uninstall.csv
@@ -405,35 +335,35 @@ after_uninstall.csv
 Never commit:
 
 * EA game assets
-* Original game binaries
-* Copyrighted content
-* Redistributed game data
+* Original executables
+* Copyrighted game data
+* Commercial content
 
 ---
 
 # Release Standard
 
-Before release, every installer must satisfy:
+A build is considered release-ready only when all of the following have passed.
 
 * Successful compilation
+* Successful launcher validation
 * Successful installation
-* Successful uninstall
-* Manifest generation
-* Backup restoration
-* SHA256 rollback verification
-* No `Compare-Object` differences
-
-Only then is a build considered release-ready.
+* Successful gameplay verification
+* Successful rollback
+* RestoreData validation
+* Compare-Object returns no differences
+* Documentation synchronized
+* Repository synchronized
 
 ---
 
 # Future Improvements
 
-Planned improvements include:
+Planned future work includes:
 
-* Shared installer template system
-* Automatic manifest filtering
-* Unified build workflow
-* CI-style validation tooling
 * Expanded installer diagnostics
-* Screenshot documentation
+* Automated release packaging
+* Automated validation tooling
+* Expanded documentation
+* Additional installer screenshots
+* Future quality-of-life improvements

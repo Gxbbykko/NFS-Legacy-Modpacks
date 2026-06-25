@@ -1,299 +1,378 @@
 # Release Engineering
 
-This document defines the release standards, versioning rules, packaging structure, checksum policy, and publishing workflow for **NFS Legacy Modpacks**.
+This document defines the release engineering standards, versioning rules, packaging workflow, validation requirements, checksum policy, and publishing process for **NFS Legacy Modpacks**.
 
-The goal of this process is to ensure every public release is:
+The objective is to ensure every public release is:
 
 * Reproducible
 * Versioned consistently
+* Deterministic
 * Rollback-safe
-* Verifiable
+* Fully validated
 * Properly documented
+
+Every release follows the same engineering workflow regardless of the supported Need for Speed title.
 
 ---
 
-## Versioning Strategy
+# Release Engineering Pipeline
 
-Releases follow a structured semantic-style versioning format:
+Every release follows the standardized deployment pipeline.
 
-```txt
+```text
+Developer
+        │
+        ▼
+SetupLauncher
+        │
+        ▼
+LegacyUI
+        │
+        ▼
+Inno Setup Backend
+        │
+        ▼
+ArcRunner
+        │
+        ▼
+FreeArc
+        │
+        ▼
+Game Installation
+        │
+        ▼
+RestoreData Rollback
+        │
+        ▼
+Validation
+        │
+        ▼
+Public Release
+```
+
+The same architecture is shared across all supported installers.
+
+---
+
+# Versioning Strategy
+
+Releases follow semantic versioning.
+
+```text
 Major.Minor.Patch
 ```
 
-Example:
+Examples:
 
-```txt
-1.0.0
-1.1.0
-1.2.1
+```text
 2.0.0
+2.1.0
+2.1.1
+3.0.0
 ```
 
-### Version Meaning
+## Version Meaning
 
-| Version Part | Meaning                                                                |
-| ------------ | ---------------------------------------------------------------------- |
-| **Major**    | Large architectural changes, installer rewrites, major feature changes |
-| **Minor**    | New features, validation improvements, compatibility updates           |
-| **Patch**    | Bug fixes, rollback fixes, script cleanup, installer fixes             |
-
-### Examples
-
-```txt
-1.0.0
-```
-
-Initial public release.
-
-```txt
-1.1.0
-```
-
-Added validation improvements or installer features.
-
-```txt
-1.1.1
-```
-
-Bugfix release for installer issues.
-
-```txt
-2.0.0
-```
-
-Major installer architecture rewrite.
+| Version   | Meaning                                                                    |
+| --------- | -------------------------------------------------------------------------- |
+| **Major** | Architectural changes, installer redesigns, framework milestones           |
+| **Minor** | New installer functionality, compatibility improvements, optional features |
+| **Patch** | Bug fixes, rollback improvements, installer maintenance                    |
 
 ---
 
-## Release Naming Convention
+# Release Naming Convention
 
-Installer filenames must follow a standardized naming structure.
+Installer filenames must remain deterministic.
 
 Format:
 
-```txt
+```text
 <Game>-Legacy-Modpack-v<version>.exe
 ```
 
 Examples:
 
-```txt
-NFSU-Legacy-Modpack-v1.0.0.exe
-NFSU2-Legacy-Modpack-v1.0.0.exe
-NFSMW-Legacy-Modpack-v1.0.0.exe
-NFSC-Legacy-Modpack-v1.0.0.exe
-NFSPS-Legacy-Modpack-v1.0.0.exe
-NFSUC-Legacy-Modpack-v1.0.0.exe
+```text
+NFSU-Legacy-Modpack-v2.0.0.exe
+NFSU2-Legacy-Modpack-v2.0.0.exe
+NFSMW-Legacy-Modpack-v2.0.0.exe
+NFSC-Legacy-Modpack-v2.0.0.exe
+NFSPS-Legacy-Modpack-v2.0.0.exe
+NFSUC-Legacy-Modpack-v2.0.0.exe
 ```
 
-Avoid filenames such as:
+Never publish installers with temporary names such as:
 
-```txt
-modpack_final.exe
-newinstaller.exe
-installerfixed2.exe
-latestbuild.exe
+```text
+installer_final.exe
+latest.exe
+fixed.exe
+test.exe
 ```
-
-Release files must always be deterministic and versioned.
 
 ---
 
-## Git Tag Format
+# Release Components
+
+Every public installer consists of the following components.
+
+| Component            | Purpose                       |
+| -------------------- | ----------------------------- |
+| SetupLauncher        | Public launcher               |
+| LegacyUI             | Installation interface        |
+| Backend (Inno Setup) | Installer engine              |
+| ArcRunner            | Archive extraction controller |
+| FreeArc              | Payload extraction            |
+| RestoreData          | Rollback system               |
+
+These components form the validated Release 2.0 installer architecture.
+
+---
+
+# Validation Requirements
+
+Every release must successfully complete:
+
+* Game validation
+* Installation
+* Archive extraction
+* File deployment
+* Optional component installation
+* Rollback
+* RestoreData verification
+* Manifest verification
+* Empty directory cleanup
+
+A release is considered valid only after every supported title passes the complete validation workflow.
+
+---
+
+# Rollback Validation
+
+Rollback validation is mandatory.
+
+Validation consists of:
+
+1. Clean patched reference installation.
+2. Install modpack.
+3. Verify installed modpack.
+4. Uninstall using Restore Tool.
+5. Compare restored installation against the original reference.
+
+Verification is performed using PowerShell filesystem comparison.
+
+A successful comparison produces no differences.
+
+---
+
+# SHA-256 Verification Policy
+
+Every public release must include a SHA-256 checksum.
+
+Example:
+
+```powershell
+Get-FileHash ".\NFSU-Legacy-Modpack-v2.0.0.exe" -Algorithm SHA256
+```
+
+Checksums should accompany:
+
+* GitHub Releases
+* Release notes
+* Optional checksum files
+
+---
+
+# Git Tag Format
 
 Git tags must follow:
 
-```txt
+```text
 v<version>
 ```
 
 Examples:
 
-```txt
-v1.0.0
-v1.1.0
-v1.2.3
+```text
+v2.0.0
+v2.1.0
+v2.1.1
 ```
 
-Create a tag:
+Example:
 
 ```powershell
-git tag v1.0.0
-git push origin v1.0.0
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
-Tags represent immutable public release states.
+Tags represent immutable release states.
 
-Do not reuse or modify released tags.
+Released tags must never be modified.
 
 ---
 
-## GitHub Release Format
+# GitHub Release Format
 
-GitHub release titles must follow:
+GitHub release titles should follow:
 
-```txt
-<Game Name> Legacy Modpack v<version>
-```
-
-Examples:
-
-```txt
-Need for Speed Underground Legacy Modpack v1.0.0
-Need for Speed Most Wanted Legacy Modpack v1.2.0
+```text
+Need for Speed Underground Legacy Modpack v2.0.0
+Need for Speed Underground 2 Legacy Modpack v2.0.0
+Need for Speed Most Wanted Legacy Modpack v2.0.0
 Need for Speed Carbon Legacy Modpack v2.0.0
+Need for Speed ProStreet Legacy Modpack v2.0.0
+Need for Speed Undercover Legacy Modpack v2.0.0
 ```
 
-Release descriptions should include:
+Release notes should contain:
 
-* Version number
-* Major changes
-* Validation changes
-* Rollback changes
+* Installer improvements
+* Rollback improvements
+* Validation summary
+* Compatibility
 * Known issues
-* SHA256 checksum
+* SHA-256 checksum
 
 ---
 
-## Release Notes Template
+# Allowed Release Files
 
-Example release format:
+Public releases may contain:
 
-```md
-## Changes
-
-### Installer
-- Improved validation workflow
-- Updated rollback handling
-- Improved archive extraction
-
-### Fixes
-- Fixed uninstall edge case
-- Fixed manifest cleanup issue
-
-### Validation
-- Updated rollback verification
-- Added additional install checks
-
-### SHA256
-
-NFSU-Legacy-Modpack-v1.0.0.exe
-
-SHA256:
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-```
-
----
-
-## SHA256 Verification Policy
-
-Every public installer release must include a SHA256 checksum.
-
-Generate checksum:
-
-```powershell
-Get-FileHash ".\NFSU-Legacy-Modpack-v1.0.0.exe" -Algorithm SHA256
-```
-
-Example output:
-
-```txt
-Algorithm : SHA256
-Hash      : A1B2C3D4E5F67890...
-Path      : NFSU-Legacy-Modpack-v1.0.0.exe
-```
-
-Checksums must be included in:
-
-* GitHub Releases
-* Release notes
-* Optional checksum text files
-
-Purpose:
-
-* Integrity verification
-* Corruption detection
-* Trust verification
-* Reproducible releases
-
----
-
-## Allowed Release Files
-
-Public releases may include:
-
-```txt
-.exe installer
-release notes
-checksum file
-optional changelog
-```
-
-Examples:
-
-```txt
-NFSU-Legacy-Modpack-v1.0.0.exe
+```text
+Installer (.exe)
+Release notes
+CHANGELOG
 SHA256.txt
-CHANGELOG.md
 ```
 
 ---
 
-## Forbidden Release Files
+# Forbidden Release Files
 
-Public releases must **not** include:
+Public releases must never include:
 
-```txt
-raw source archives
-temporary extraction folders
-debug files
-backup files
-private tools
-working project folders
-test screenshots
+```text
+Game files
+Commercial assets
+Archive payloads
+Temporary extraction folders
+Debug logs
+Private development tools
+Build folders
+Working directories
 ```
 
 Examples:
 
-```txt
+```text
 arc.exe
 tmp/
-Build/
-Backup/
-installer_test.exe
+obj/
+bin/
 debug.log
+Backup/
 ```
 
 ---
 
-## Release Packaging Checklist
+# Release Checklist
 
-Before every release:
+Before publishing a public release, every supported title must successfully complete the following checklist.
 
-* [ ] Installer compiles successfully
-* [ ] Game validation tested
-* [ ] Install process tested
-* [ ] Uninstall process tested
-* [ ] Rollback validation confirmed
-* [ ] Manifest cleanup verified
-* [ ] Screenshots updated if required
-* [ ] SHA256 generated
-* [ ] CHANGELOG updated
-* [ ] Git tag created
-* [ ] GitHub release published
+## Source
+
+* [x] SetupLauncher source updated
+* [x] LegacyUI source updated
+* [x] Inno Setup scripts updated
+* [x] ArcRunner source updated
+* [x] Splash source updated
+* [x] Documentation reviewed
 
 ---
 
-## Release Philosophy
+## Build
+
+* [x] SetupLauncher published (Release)
+* [x] LegacyUI published (Release)
+* [x] Backend compiled successfully
+* [x] Splash compiled
+* [x] ArcRunner compiled
+
+---
+
+## Deployment
+
+* [x] backend.exe copied to `_backend`
+* [x] `setup_launcher.ini` generated
+* [x] Launcher icons verified
+* [x] AppId verified
+* [x] Backend validation verified
+
+---
+
+## Installation
+
+* [x] Game detection verified
+* [x] Installation validation verified
+* [x] Archive extraction completed
+* [x] Installation completed
+* [x] Optional components verified
+* [x] MOVIES package verified (where applicable)
+
+---
+
+## Rollback
+
+* [x] RestoreData created
+* [x] `install_manifest.txt` generated
+* [x] `new_files_manifest.txt` generated
+* [x] Changed files backed up
+* [x] New files tracked
+* [x] Restore completed successfully
+* [x] Empty directories removed
+
+---
+
+## Validation
+
+* [x] Modpack functionality verified
+* [x] Rollback completed
+* [x] Compare-Object verification passed
+* [x] Restored installation matches vanilla patched reference
+
+---
+
+## Documentation
+
+* [x] README updated
+* [x] CHANGELOG updated
+* [ ] Release notes updated
+* [ ] Screenshots updated (if applicable)
+
+---
+
+## Release
+
+* [ ] SHA-256 generated
+* [ ] Git tag created
+* [ ] GitHub Release created
+* [ ] Installer uploaded
+
+
+---
+
+# Release Philosophy
 
 A release is considered complete only when:
 
-1. Installation succeeds
-2. Uninstallation succeeds
-3. Rollback validation passes
-4. Original game state is restored
-5. Public artifacts are reproducible
+1. Installation succeeds.
+2. Installation validation succeeds.
+3. Rollback succeeds.
+4. RestoreData successfully restores the original installation.
+5. Verification confirms the restored installation matches the original patched reference.
+6. Every supported title passes the complete validation workflow.
 
-Installer reliability is prioritized over release speed.
-
-No release should be published without rollback verification.
+Installer reliability, deterministic restoration, and preservation of the original games are prioritized over release speed.

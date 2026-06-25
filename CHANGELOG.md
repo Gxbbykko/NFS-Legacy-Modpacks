@@ -1,68 +1,151 @@
 # Changelog
 
-All notable changes to **NFS Legacy Modpacks** will be documented in this file.
+All notable changes to **NFS Legacy Modpacks** are documented in this file.
 
-The format follows a structured release-based changelog designed for reproducible installer development, rollback validation, and restoration-safe deployment.
-
----
-
-## [Unreleased]
-
-### Coming Soon
-
-Further improvements, polish, validation updates, and installer refinements are planned.
-
-No release timeline is currently available.
+The project follows a structured, release-oriented changelog documenting architectural milestones, installer evolution, rollback validation, and repository development.
 
 ---
 
-## [Alpha 0.3b] - Current Pre-Release
+# [2.0.0] - Release 2.0 Architecture Milestone
 
-**Status:** Pre-build / Pre-release
+**Status:** Framework Complete / Fully Validated
 
-This version represents the current **architecture-finalized installer framework** for legacy Need for Speed modpacks.
+Release 2.0 represents the completion of the unified installer architecture shared across every supported Need for Speed title.
 
-The project is currently in a **pre-release stabilization phase**, focused on:
+This milestone concludes the transition from a traditional Inno Setup installer into a modular installer platform featuring a dedicated launcher, modern installation interface, optimized extraction pipeline, deterministic rollback system, and standardized deployment architecture.
 
-* Installer architecture finalization
-* Rollback reliability
-* Manifest tracking
-* Validation workflows
-* Documentation maturity
-* Repository standardization
+Every supported title now shares the same validated installation and restoration framework.
 
-This release should be considered a **testing and framework milestone**, not a final public release.
+---
 
-### Added
+## Added
 
+### Installer Framework
+
+* SetupLauncher launcher framework
+* LegacyUI modern installation interface
+* ArcRunner extraction controller
+* Splash startup framework
+* Unified installer architecture
+* Standardized deployment pipeline
+
+### Installation System
+
+* Automatic game detection
+* Installation validation
+* Latest official patch verification
+* Large Address Aware verification
+* Optional component framework
+* External package support
+* Live installation logging
+* Standardized installer workflow
+
+### Rollback System
+
+* RestoreData rollback architecture
+* Changed-file backup system
+* install_manifest.txt tracking
+* new_files_manifest.txt tracking
+* Manifest-driven uninstall
+* Automatic restoration of overwritten files
+* Automatic removal of newly installed files
+* Empty directory cleanup
+* RestoreData protection attributes
+* SHA-256 comparison support
+* Deterministic rollback workflow
+
+### Repository
+
+* Complete installer source tree
+* SetupLauncher source
+* LegacyUI source
+* ArcRunner source
+* Splash source
+* Updated Inno Setup scripts
+* Expanded documentation
+* Screenshot documentation
 * Release engineering documentation
-* GitHub release template
-* Screenshot system and repository visual documentation
-* Rollback validation proof screenshots
-* Installer workflow screenshots
-* Release checklist documentation
-* Build notes documentation
-* Hashing command documentation
-* Rollback validation documentation
-* Shared installer template
-* Standardized repository structure
-* MIT License
-* Project README
-* Standardized changelog format
 
-### Changed
+---
 
-* Standardized installer architecture across supported titles
-* Improved repository structure and documentation layout
-* Improved README formatting and GitHub presentation
-* Added rollback-safe installer philosophy documentation
-* Improved screenshot organization and naming consistency
-* Standardized release engineering workflow
-* Improved installer rollback validation methodology
+## Changed
 
-### Installer Support
+### Installer Architecture
 
-Current supported installer frameworks:
+The installer framework has been redesigned into a layered architecture.
+
+Previous architecture:
+
+```text
+Setup.exe
+        │
+        ▼
+Inno Setup
+```
+
+Current Release 2.0 architecture:
+
+```text
+SetupLauncher
+        │
+        ▼
+LegacyUI
+        │
+        ▼
+Inno Setup Backend
+        │
+        ▼
+ArcRunner
+        │
+        ▼
+FreeArc
+        │
+        ▼
+Game Installation
+        │
+        ▼
+RestoreData Rollback
+```
+
+### Standardization
+
+* Unified installer architecture across all supported titles
+* NFSU Gold Master architecture adopted as the reference implementation
+* Shared rollback engine
+* Shared validation workflow
+* Shared deployment structure
+* Shared installer philosophy
+
+---
+
+## Validation
+
+The Release 2.0 installer framework has been validated across every supported title.
+
+| Game                         | Installation | Rollback |
+| ---------------------------- | ------------ | -------- |
+| Need for Speed Underground   | ✅ PASS       | ✅ PASS   |
+| Need for Speed Underground 2 | ✅ PASS       | ✅ PASS   |
+| Need for Speed Most Wanted   | ✅ PASS       | ✅ PASS   |
+| Need for Speed Carbon        | ✅ PASS       | ✅ PASS   |
+| Need for Speed ProStreet     | ✅ PASS       | ✅ PASS   |
+| Need for Speed Undercover    | ✅ PASS       | ✅ PASS   |
+
+Validation confirms:
+
+* Successful installation
+* Successful extraction
+* Successful rollback
+* Restoration of overwritten files
+* Removal of newly installed files
+* Cleanup of empty directories
+* Restoration to the original patched installation
+
+Rollback verification was performed by comparing the restored installation against a clean vanilla patched reference.
+
+---
+
+## Supported Installer Frameworks
 
 * Need for Speed Underground
 * Need for Speed Underground 2
@@ -71,19 +154,13 @@ Current supported installer frameworks:
 * Need for Speed ProStreet
 * Need for Speed Undercover
 
-### Required Game Versions
+---
+
+## Required Game Versions
 
 > **IMPORTANT**
 >
-> All supported titles **must be patched to the latest official version before installation**.
->
-> Unsupported or unpatched game versions may result in:
->
-> * Failed installation
-> * Missing assets
-> * Crashes
-> * Incorrect rollback behavior
-> * Mod incompatibility
+> Every supported title must be updated to the latest official version before installing a modpack.
 
 | Game                         | Required Version |
 | ---------------------------- | ---------------- |
@@ -94,92 +171,93 @@ Current supported installer frameworks:
 | Need for Speed ProStreet     | **1.1.0**        |
 | Need for Speed Undercover    | **1.0.0.1**      |
 
-### Validation
+---
 
-* Rollback validation workflow documented
-* SHA256 comparison workflow documented
-* Manifest-based uninstall verification documented
-* Deterministic rollback methodology documented
-* Rollback-safe uninstall system verified
+## Release Notes
 
-### Release Notes
+Release 2.0 represents the first fully validated version of the installer framework.
 
-This version is considered a **framework milestone release**.
+Major milestones completed:
 
-Future updates, improvements, and additional polishing are planned.
+* Unified installer architecture
+* Shared rollback architecture
+* SetupLauncher integration
+* LegacyUI integration
+* ArcRunner integration
+* RestoreData implementation
+* Six-title validation
+* Repository modernization
+* Documentation overhaul
 
-**No ETA is currently available.**
+This release establishes the foundation for future public modpack releases while maintaining deterministic installation, deterministic rollback, and reproducible restoration across every supported title.
 
 ---
 
-## [1.0.0] - Planned Stable Release
+# Development History
 
-### Planned Release Scope
+## Alpha 0.3b
 
-Initial stable public release of the **NFS Legacy Modpacks installer framework**.
+Framework stabilization milestone.
 
-Expected contents:
+Major work completed during this phase:
 
-* Standardized installer architecture
-* Rollback-safe uninstall workflow
-* Manifest tracking system
-* Validation system
-* Documentation package
-* Release engineering workflow
-* Stable installer packaging
-* Expanded compatibility testing
+* Initial installer architecture
+* Rollback proof of concept
+* Manifest tracking
+* Validation methodology
+* Repository standardization
+* Initial documentation
 
-### Release Goals
-
-* Deterministic installation
-* Deterministic rollback
-* Clean uninstall validation
-* Reliable installer behavior
-* Consistent release packaging
-* Stable public-ready experience
+This phase served as the foundation for the Release 2.0 architecture.
 
 ---
 
-## Versioning Policy
+# Future Development
 
-This project follows:
+Future updates will focus on:
 
-```txt
+* Public Release packaging
+* Documentation expansion
+* Additional installer polish
+* Expanded screenshot gallery
+* Future compatibility improvements
+
+---
+
+# Versioning Policy
+
+The project follows semantic versioning.
+
+```text
 Major.Minor.Patch
 ```
 
 Examples:
 
-```txt
-0.3.0-alpha
-0.5.0-beta
-1.0.0
-1.1.0
-1.1.1
+```text
 2.0.0
+2.1.0
+2.1.1
+3.0.0
 ```
 
-### Meaning
-
-| Version Type    | Purpose                                |
-| --------------- | -------------------------------------- |
-| **Major**       | Large architectural changes            |
-| **Minor**       | New installer features or improvements |
-| **Patch**       | Bug fixes and validation fixes         |
-| **Pre-release** | Framework testing and stabilization    |
+| Version | Meaning                                            |
+| ------- | -------------------------------------------------- |
+| Major   | Architectural changes                              |
+| Minor   | New installer functionality                        |
+| Patch   | Bug fixes, validation improvements and maintenance |
 
 ---
 
-## Release Philosophy
+# Release Philosophy
 
 A release is only considered complete when:
 
-1. Installation succeeds
-2. Uninstallation succeeds
-3. Rollback validation passes
-4. Original game state is restored
-5. SHA256 verification is generated
+1. Installation succeeds.
+2. Installation validation succeeds.
+3. Rollback succeeds.
+4. Restored installation matches the original patched reference.
+5. Rollback verification passes.
+6. Installer behavior is reproducible across every supported title.
 
-Installer reliability is prioritized over release speed.
-
-No public release should be published without rollback validation.
+Installer reliability, deterministic restoration, and preservation of the original games remain the highest priorities of the project.

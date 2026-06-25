@@ -1,40 +1,96 @@
 # Rollback Validation
 
-This document explains how rollback validation is performed for NFS Legacy Modpacks.
+This document defines the official rollback validation methodology used by **NFS Legacy Modpacks Release 2.0**.
 
-## Purpose
+The rollback system has been designed to guarantee deterministic restoration of supported Need for Speed installations after uninstalling a modpack.
 
-Every installer in this project is designed to support deterministic rollback.
-
-The goal is to ensure that uninstalling a modpack restores the game to its original state before installation.
-
-Rollback validation verifies that:
-
-* Modpack-added files are removed
-* Original files are restored from backup
-* No leftover files remain
-* File hashes match the original installation
+Rollback validation confirms that every installer restores the original patched game installation without leaving any residual modpack files.
 
 ---
 
-## Validation Method
+# Purpose
 
-Rollback integrity is verified using SHA256 hashing.
+Every installer included in NFS Legacy Modpacks implements the same rollback architecture.
 
-Three snapshots are created:
+The objectives are:
 
-### 1. Baseline (Vanilla Patched Game)
+* Restore every overwritten original file.
+* Remove every file introduced by the modpack.
+* Remove empty directories created during installation.
+* Restore the original patched installation.
+* Produce deterministic and reproducible rollback behavior.
 
-A SHA256 hash list is generated before installation.
+---
 
-This acts as the reference state.
+# Rollback Architecture
 
-Example:
+Each installer creates the following rollback structure inside the game directory.
 
-```powershell
+```text id="z1g9fe"
+_LegacyInstaller
+│
+├── install_manifest.txt
+├── new_files_manifest.txt
+└── RestoreData
+    └── Backup
+```
+
+## Component Overview
+
+| Component              | Purpose                                |
+| ---------------------- | -------------------------------------- |
+| install_manifest.txt   | Tracks installed files and directories |
+| new_files_manifest.txt | Tracks newly created files for removal |
+| RestoreData/Backup     | Stores overwritten original files      |
+
+Only files that are actually overwritten are backed up.
+
+This minimizes storage requirements while preserving deterministic restoration.
+
+---
+
+# Validation Workflow
+
+Rollback validation is performed using a clean patched game installation.
+
+Validation consists of the following sequence.
+
+```text id="32v5tu"
+Clean Patched Game
+        │
+        ▼
+Generate Baseline
+        │
+        ▼
+Install Modpack
+        │
+        ▼
+Verify Modpack
+        │
+        ▼
+Run Restore Tool
+        │
+        ▼
+Generate Final Snapshot
+        │
+        ▼
+Compare Results
+```
+
+---
+
+# SHA-256 Validation
+
+Three snapshots are generated during validation.
+
+## Step 1 — Baseline
+
+Generate a SHA-256 snapshot of the clean patched installation.
+
+```powershell id="t42vh4"
 Get-ChildItem -Recurse -File |
 Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
+    $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
 } |
 Get-FileHash -Algorithm SHA256 |
 Select-Object Path, Hash |
@@ -43,18 +99,14 @@ Export-Csv ".\baseline_vanilla.csv" -NoTypeInformation
 
 ---
 
-### 2. After Installation
+## Step 2 — After Installation
 
-A second hash snapshot is generated after modpack installation.
+Generate a snapshot immediately after installation.
 
-This confirms installation changes.
-
-Example:
-
-```powershell
+```powershell id="9k8rjc"
 Get-ChildItem -Recurse -File |
 Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
+    $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
 } |
 Get-FileHash -Algorithm SHA256 |
 Select-Object Path, Hash |
@@ -63,16 +115,16 @@ Export-Csv ".\after_install.csv" -NoTypeInformation
 
 ---
 
-### 3. After Uninstall
+## Step 3 — After Rollback
 
-After uninstalling the modpack, a final hash snapshot is generated.
+Run the Restore Tool.
 
-Example:
+Generate the final snapshot.
 
-```powershell
+```powershell id="a5fov4"
 Get-ChildItem -Recurse -File |
 Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
+    $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
 } |
 Get-FileHash -Algorithm SHA256 |
 Select-Object Path, Hash |
@@ -81,13 +133,11 @@ Export-Csv ".\after_uninstall.csv" -NoTypeInformation
 
 ---
 
-## Verification
+# Verification
 
-The baseline snapshot is compared with the post-uninstall snapshot.
+Compare the baseline against the restored installation.
 
-Example:
-
-```powershell
+```powershell id="xxtkdh"
 $baseline = Import-Csv ".\baseline_vanilla.csv"
 $after = Import-Csv ".\after_uninstall.csv"
 
@@ -99,44 +149,87 @@ Compare-Object `
 
 ---
 
-## Expected Result
+# Expected Result
 
-A successful rollback validation produces:
+A successful validation produces:
 
-```txt
+```text id="5cbdn5"
 (no output)
 ```
 
-No output means:
+This confirms:
 
-* File paths match
-* File hashes match
-* No leftover modpack files remain
-* The game was restored successfully
+* Original files restored.
+* Modded files removed.
+* No remaining installer artifacts.
+* No remaining modpack files.
+* Restored installation matches the original patched reference.
 
 ---
 
-## Exceptions
+# Rollback Order
 
-Some third-party middleware or runtime-generated files may require explicit cleanup.
+The Release 2.0 rollback engine performs restoration in the following order.
 
-Example:
-
-```txt
-nextgenfx_settings.ini
+```text id="oqlf9w"
+Delete new files
+        │
+        ▼
+Restore overwritten originals
+        │
+        ▼
+Title-specific cleanup
+        │
+        ▼
+Remove empty directories
+        │
+        ▼
+Verification
 ```
 
-These files may be manually removed during uninstall if generated dynamically.
+This sequence is shared across every supported title.
 
 ---
 
-## Status
+# Title-Specific Notes
 
-Rollback validation has been successfully verified for:
+Some games require title-specific cleanup during rollback.
 
-* Underground
-* Underground 2
-* Most Wanted
-* Carbon
-* ProStreet
-* Undercover
+Examples include:
+
+* MOVIES package handling
+* Optional component cleanup
+* Runtime-generated configuration files
+
+These exceptions are handled before the final cleanup phase while preserving the deterministic rollback workflow.
+
+---
+
+# Validation Status
+
+Rollback validation has successfully completed for every supported installer.
+
+| Game                         | Validation |
+| ---------------------------- | ---------- |
+| Need for Speed Underground   | ✅ PASS     |
+| Need for Speed Underground 2 | ✅ PASS     |
+| Need for Speed Most Wanted   | ✅ PASS     |
+| Need for Speed Carbon        | ✅ PASS     |
+| Need for Speed ProStreet     | ✅ PASS     |
+| Need for Speed Undercover    | ✅ PASS     |
+
+Validation included:
+
+* Installation
+* Gameplay verification
+* Rollback
+* Compare-Object verification
+* Restoration against the clean patched reference
+
+---
+
+# Validation Philosophy
+
+Rollback is considered successful only when the restored installation is functionally and structurally identical to the original patched installation.
+
+A release is never considered complete until every supported title passes the complete rollback validation workflow.

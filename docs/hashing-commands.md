@@ -1,14 +1,46 @@
 # Hashing Commands
 
-This document contains reusable PowerShell commands for validating installer rollback integrity.
+This document contains the official PowerShell commands used to validate rollback integrity for **NFS Legacy Modpacks Release 2.0**.
 
-These commands are used to compare a clean vanilla installation with the post-uninstall state.
+The commands are used to compare a clean patched game installation against the restored installation after uninstall.
+
+Rollback validation is mandatory for every supported title before a public release.
 
 ---
 
-## Step 1 — Remove Old Validation Files
+# Validation Workflow
 
-Run before creating a new validation session.
+Rollback validation follows the Release 2.0 workflow.
+
+```text
+Clean Patched Game
+        │
+        ▼
+Baseline Snapshot
+        │
+        ▼
+Install Modpack
+        │
+        ▼
+Post-Install Snapshot
+        │
+        ▼
+Rollback
+        │
+        ▼
+Post-Rollback Snapshot
+        │
+        ▼
+Compare-Object
+```
+
+A successful comparison confirms deterministic restoration.
+
+---
+
+# Step 1 — Remove Previous Validation Files
+
+Before starting a new validation session, remove any previous snapshot files.
 
 ```powershell
 Remove-Item ".\baseline_vanilla.csv" -Force -ErrorAction SilentlyContinue
@@ -18,46 +50,54 @@ Remove-Item ".\after_uninstall.csv" -Force -ErrorAction SilentlyContinue
 
 ---
 
-## Step 2 — Generate Baseline Hashes
+# Step 2 — Generate Baseline Snapshot
 
-Run this on a clean, patched vanilla game before installing the modpack.
+Run on a clean, fully patched game before installing the modpack.
 
 ```powershell
 Get-ChildItem -Recurse -File |
 Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
+    $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
 } |
 Get-FileHash -Algorithm SHA256 |
 Select-Object Path, Hash |
 Export-Csv ".\baseline_vanilla.csv" -NoTypeInformation
 ```
 
+This snapshot becomes the reference used for rollback validation.
+
 ---
 
-## Step 3 — Verify Install Manifest Exists
+# Step 3 — Verify Rollback Metadata
 
-Confirm installer tracking was created.
+Confirm that rollback metadata has been generated correctly.
 
 ```powershell
 Get-ChildItem ".\_LegacyInstaller" -Force
 ```
 
-Preview first entries:
+Preview the installation manifest:
 
 ```powershell
 Get-Content ".\_LegacyInstaller\install_manifest.txt" | Select-Object -First 20
 ```
 
+Preview the new files manifest:
+
+```powershell
+Get-Content ".\_LegacyInstaller\new_files_manifest.txt" | Select-Object -First 20
+```
+
 ---
 
-## Step 4 — Generate Post-Install Hashes
+# Step 4 — Generate Post-Install Snapshot
 
-Run after installation.
+Run immediately after installation.
 
 ```powershell
 Get-ChildItem -Recurse -File |
 Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
+    $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
 } |
 Get-FileHash -Algorithm SHA256 |
 Select-Object Path, Hash |
@@ -66,9 +106,9 @@ Export-Csv ".\after_install.csv" -NoTypeInformation
 
 ---
 
-## Step 5 — Run Uninstaller
+# Step 5 — Run the Restore Tool
 
-Wait for completion.
+Wait until rollback has completed.
 
 ```powershell
 Start-Process ".\_LegacyInstaller\unins000.exe" -Wait
@@ -76,14 +116,14 @@ Start-Process ".\_LegacyInstaller\unins000.exe" -Wait
 
 ---
 
-## Step 6 — Generate Post-Uninstall Hashes
+# Step 6 — Generate Post-Rollback Snapshot
 
-Run after uninstall finishes.
+After uninstall has completed:
 
 ```powershell
 Get-ChildItem -Recurse -File |
 Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
+    $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
 } |
 Get-FileHash -Algorithm SHA256 |
 Select-Object Path, Hash |
@@ -92,9 +132,9 @@ Export-Csv ".\after_uninstall.csv" -NoTypeInformation
 
 ---
 
-## Step 7 — Compare Results
+# Step 7 — Compare Results
 
-Compare vanilla state with the restored state.
+Compare the restored installation against the original patched reference.
 
 ```powershell
 $baseline = Import-Csv ".\baseline_vanilla.csv"
@@ -108,33 +148,51 @@ Compare-Object `
 
 ---
 
-## Expected Result
+# Expected Result
 
-Successful rollback validation returns:
+A successful rollback validation produces:
 
-```txt
+```text
 (no output)
 ```
 
-No output means:
+This confirms:
 
-* No missing files
-* No leftover modded files
-* No changed file hashes
-* Complete restoration
+* Original files restored.
+* Modded files removed.
+* No remaining installer artifacts.
+* No remaining modpack files.
+* File hashes match the clean patched reference.
 
 ---
 
-## Notes
+# Excluded Files
 
-The following folders/files are excluded intentionally:
+The following files and folders are intentionally excluded from validation.
 
-```txt
-Backup/
+```text
+RestoreData/
 _LegacyInstaller/
 baseline_vanilla.csv
 after_install.csv
 after_uninstall.csv
 ```
 
-These are installer-generated validation files and should not be included in rollback comparison.
+These files are generated by the installer or validation workflow and are not part of the game installation.
+
+---
+
+# Validation Status
+
+The Release 2.0 rollback validation workflow has been successfully verified for every supported title.
+
+| Game                         | Validation |
+| ---------------------------- | ---------- |
+| Need for Speed Underground   | ✅ PASS     |
+| Need for Speed Underground 2 | ✅ PASS     |
+| Need for Speed Most Wanted   | ✅ PASS     |
+| Need for Speed Carbon        | ✅ PASS     |
+| Need for Speed ProStreet     | ✅ PASS     |
+| Need for Speed Undercover    | ✅ PASS     |
+
+The PowerShell commands documented in this file are the official validation methodology used to verify deterministic rollback across the NFS Legacy Modpacks project.

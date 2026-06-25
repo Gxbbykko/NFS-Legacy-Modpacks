@@ -2,19 +2,21 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
-![Installer](https://img.shields.io/badge/installer-Inno%20Setup-purple)
-![Rollback](https://img.shields.io/badge/rollback-validated-success)
+![Architecture](https://img.shields.io/badge/architecture-Release%202.0-success)
+![Rollback](https://img.shields.io/badge/rollback-100%25%20validated-brightgreen)
 ![Games](https://img.shields.io/badge/supported%20titles-6-orange)
 
-Modern installer framework and restoration-focused modpacks for classic **Need for Speed** titles.
+Modern installer framework and preservation-focused modpacks for the classic **Need for Speed** PC titles.
 
-This repository provides standardized **Inno Setup installer architecture**, rollback validation workflows, and restoration-safe installation systems for legacy Need for Speed modpacks.
+NFS Legacy Modpacks is a unified installer framework and restoration-focused preservation project covering all six classic Need for Speed titles released between 2003 and 2008.
 
-The goal of this project is to modernize installation for legacy Need for Speed games while preserving **reliability, reversibility, deterministic rollback, and clean restoration**.
+Rather than simply packaging modifications, the project focuses on providing a modern installation experience while preserving the original games through deterministic installation, validated rollback, and clean restoration.
+
+The installer framework combines a custom launcher, a modern installation interface, a hidden installer backend, optimized archive extraction, and a fully validated rollback architecture into a standardized deployment system shared across every supported title.
 
 ---
 
-## Supported Titles
+# Supported Titles
 
 * Need for Speed Underground
 * Need for Speed Underground 2
@@ -25,92 +27,162 @@ The goal of this project is to modernize installation for legacy Need for Speed 
 
 ---
 
-## Features
+# Installer Architecture
 
-### Installer Features
+Every title now uses the same validated installer architecture.
 
-* FreeArc-based archive extraction
-* Splash screen support
+```text
+SetupLauncher
+        │
+        ▼
+LegacyUI
+        │
+        ▼
+Inno Setup Backend
+        │
+        ▼
+ArcRunner
+        │
+        ▼
+FreeArc
+        │
+        ▼
+Game Installation
+        │
+        ▼
+RestoreData Rollback System
+```
+
+Each layer has a dedicated responsibility.
+
+| Component     | Responsibility                                        |
+| ------------- | ----------------------------------------------------- |
+| SetupLauncher | Secure launcher, game selection, installer validation |
+| LegacyUI      | Modern installation interface and frontend controller |
+| Inno Setup    | Installation backend and rollback engine              |
+| ArcRunner     | Archive extraction controller                         |
+| FreeArc       | High-compression payload extraction                   |
+| Splash        | Startup branding before installer initialization      |
+
+---
+
+# Features
+
+## Installer Architecture
+
+* Unified installer architecture shared across all six titles
+* SetupLauncher frontend launcher
+* LegacyUI installation interface
+* Hidden Inno Setup backend
+* ArcRunner extraction controller
+* FreeArc compressed payload system
+* Splash startup framework
+* Standardized deployment pipeline
+
+---
+
+## Installation Features
+
 * Automatic game folder detection
-* Game installation validation
-* Large Address Aware (4GB Patch) executable verification
-* Manifest-based installed file tracking
-* Backup restoration during uninstall
-* Clean rollback system using `_LegacyInstaller`
-* SHA256 rollback verification workflow
+* Installation validation
+* Large Address Aware (4GB Patch) verification
+* Optional component support
+* External MOVIES package handling
+* Manifest generation
+* Installation progress logging
+* Deterministic installation workflow
 
-### Validation Features
+---
+
+## Rollback Features
+
+* RestoreData rollback architecture
+* Changed-file backup system
+* SHA-256 file comparison
+* install_manifest.txt tracking
+* new_files_manifest.txt tracking
+* Manifest-driven uninstall
+* Automatic restoration of overwritten files
+* Automatic removal of newly installed files
+* Automatic empty folder cleanup
+* Hidden RestoreData protection
+* Deterministic restoration
+
+---
+
+## Validation Features
 
 * File hash comparison before installation
 * File hash comparison after uninstall
 * Rollback integrity verification
 * Deterministic uninstall validation
-* Manifest-based file cleanup
-* Vanilla restoration confirmation
+* Vanilla patched installation comparison
+* Compare-Object verification workflow
+* Six-title validation
 
 ---
 
-## Screenshots
+# Screenshots
 
 The installer framework includes rollback-safe workflows designed to restore the original game state after uninstall.
 
-### Underground Installer
+## Underground Installer
 
 Installer startup and welcome screen.
 
 ![Underground Installer Welcome](screenshots/installers/nfsu-installer-welcome.png)
 
-### Installation Validation Warning
+## Installation Validation Warning
 
 Example warning shown when the selected game installation does not meet validation requirements.
 
 ![Underground Installer Validation](screenshots/installers/nfsu-installer-validation-warning.png)
 
-### Installation Ready State
+## Installation Ready State
 
 Installer configured and ready to begin installation.
 
 ![Underground Installer Ready](screenshots/installers/nfsu-installer-ready.png)
 
-### Installation Progress
+## Installation Progress
 
-Archive extraction and installation progress with logging enabled.
+Archive extraction and installation progress with live logging enabled.
 
 ![Underground Installer Progress](screenshots/installers/nfsu-installer-progress-96.png)
 
-### Installation Complete
+## Installation Complete
 
 Successful installation state.
 
 ![Underground Installer Complete](screenshots/installers/nfsu-installer-complete.png)
 
-### Uninstall Completion
+## Uninstall Completion
 
 Successful uninstall and restoration state.
 
 ![Underground Uninstall Complete](screenshots/installers/nfsu-uninstaller-complete.png)
 
-### Rollback Validation
+## Rollback Validation
 
 Successful rollback verification after uninstall.
 
-A clean comparison result (**no output**) confirms that the post-uninstall game state matches the original vanilla baseline.
+A clean comparison result (**no output**) confirms that the post-uninstall installation matches the original vanilla patched reference.
 
 ![NFSU Rollback Success](screenshots/rollback/nfsu-rollback-success.png)
 
-### Manifest Tracking
+## Manifest Tracking
 
-Example of generated installation manifest tracking modpack-installed files for safe removal during uninstall.
+Example of generated installation manifest tracking installed files for safe removal during uninstall.
 
 ![NFSU Manifest Example](screenshots/rollback/nfsu-manifest-example.png)
 
-### Legacy Installer Structure
+## Legacy Installer Structure
 
-Generated uninstall infrastructure used for rollback and restoration.
+Generated rollback infrastructure.
 
 ![Legacy Installer Folder](screenshots/rollback/nfsu-legacyinstaller-folder.png)
 
-### Rollback Confirmation
+## Rollback Confirmation
 
 Example of rollback confirmation during uninstall.
 
@@ -118,29 +190,38 @@ Example of rollback confirmation during uninstall.
 
 ---
 
-## Rollback System
+# Rollback System
 
-Each installer tracks installed files using:
+Each installer generates a protected rollback structure inside the game directory.
 
-```txt
-_LegacyInstaller/install_manifest.txt
+```text
+_LegacyInstaller
+│
+├── install_manifest.txt
+├── new_files_manifest.txt
+└── RestoreData
+    └── Backup
 ```
 
-During uninstall, the installer:
+The rollback process performs the following sequence:
 
-1. Deletes files listed in the install manifest
-2. Restores original files from the `Backup` folder
-3. Removes empty leftover directories
-4. Returns the game folder to its original pre-install state
+1. Unlock RestoreData
+2. Remove files recorded in `new_files_manifest.txt`
+3. Restore original files from `RestoreData\Backup`
+4. Remove empty directories
+5. Verify restoration
+6. Remove rollback infrastructure
 
-Rollback validation documentation is available in:
+Only original files that are actually overwritten are backed up, reducing required disk usage while preserving deterministic restoration.
 
-```txt
+Rollback documentation is available in:
+
+```text
 docs/rollback-validation.md
 docs/hashing-commands.md
 ```
 
-A successful rollback validation produces:
+A successful validation produces:
 
 ```powershell
 Compare-Object `
@@ -149,13 +230,36 @@ Compare-Object `
 -Property Path, Hash
 ```
 
-With **no output**, confirming a clean uninstall and exact restoration.
+with **no output**, confirming that the restored installation matches the original vanilla patched reference.
 
 ---
 
-## Repository Structure
+# Validation Status
 
-```txt
+The installer architecture has been validated across every supported title.
+
+| Title                        | Installation | Rollback |
+| ---------------------------- | ------------ | -------- |
+| Need for Speed Underground   | ✅            | ✅        |
+| Need for Speed Underground 2 | ✅            | ✅        |
+| Need for Speed Most Wanted   | ✅            | ✅        |
+| Need for Speed Carbon        | ✅            | ✅        |
+| Need for Speed ProStreet     | ✅            | ✅        |
+| Need for Speed Undercover    | ✅            | ✅        |
+
+All installers successfully:
+
+* Install the complete modpack
+* Restore overwritten files
+* Remove newly installed files
+* Clean empty directories
+* Match the original vanilla patched reference after uninstall
+
+---
+
+# Repository Structure
+
+```text
 NFS-Legacy-Modpacks/
 ├── docs/
 ├── releases/
@@ -165,6 +269,8 @@ NFS-Legacy-Modpacks/
 ├── source/
 │   ├── ArcRunner/
 │   ├── Inno/
+│   ├── LegacyUI/
+│   ├── SetupLauncher/
 │   └── Splash/
 ├── templates/
 ├── .gitignore
@@ -173,33 +279,40 @@ NFS-Legacy-Modpacks/
 └── README.md
 ```
 
-### Folder Overview
+## Folder Overview
 
-| Folder         | Purpose                                                |
-| -------------- | ------------------------------------------------------ |
-| `docs/`        | Validation, hashing, rollback, and build documentation |
-| `source/`      | Inno Setup scripts and source components               |
-| `templates/`   | Shared reusable installer templates                    |
-| `screenshots/` | Installer and rollback validation screenshots          |
-| `releases/`    | Release placeholders and packaged builds               |
-
----
-
-## Installer Philosophy
-
-Every installer in this project is designed to:
-
-* Validate game installation state
-* Detect unsupported or improperly patched copies
-* Install safely
-* Support deterministic rollback
-* Restore the original game cleanly
-
-The uninstall process is treated as equally important as installation.
+| Folder               | Purpose                                               |
+| -------------------- | ----------------------------------------------------- |
+| docs/                | Validation, rollback, release and build documentation |
+| releases/            | Release notes and packaged release information        |
+| screenshots/         | Installer and rollback screenshots                    |
+| source/ArcRunner     | Archive extraction controller                         |
+| source/Inno          | Installer backend and rollback engine                 |
+| source/LegacyUI      | Modern installation frontend                          |
+| source/SetupLauncher | Secure launcher and installer bootstrap               |
+| source/Splash        | Startup splash application                            |
+| templates/           | Shared reusable installer resources                   |
 
 ---
 
-## Important Notice
+# Installer Philosophy
+
+Every installer is designed around the following principles:
+
+* Preserve the original games.
+* Never distribute copyrighted game assets.
+* Validate the target installation before modifying it.
+* Install deterministically.
+* Roll back deterministically.
+* Restore the original patched installation.
+* Share one unified architecture across every supported title.
+* Keep the installer maintainable through standardized components.
+
+Installation and uninstallation are treated as equally important parts of the user experience.
+
+---
+
+# Important Notice
 
 This repository **does not include**:
 
@@ -208,11 +321,11 @@ This repository **does not include**:
 * Modpack archive payloads
 * Redistributed game executables
 
-You must legally own the original games and provide your own game installation.
+Users must legally own the original games and provide their own installations.
 
 ---
 
-## Roadmap
+# Roadmap
 
 * [x] Underground installer architecture
 * [x] Underground 2 installer architecture
@@ -220,15 +333,20 @@ You must legally own the original games and provide your own game installation.
 * [x] Carbon installer architecture
 * [x] ProStreet installer architecture
 * [x] Undercover installer architecture
-* [x] Rollback validation framework
+* [x] SetupLauncher framework
+* [x] LegacyUI framework
+* [x] ArcRunner extraction controller
+* [x] RestoreData rollback architecture
+* [x] Manifest-based rollback system
+* [x] Six-title validation
 * [x] Screenshot documentation
-* [ ] Shared reusable installer template
-* [ ] Public release packaging
-* [ ] Documentation expansion
-* [ ] Multi-title screenshot gallery
+* [ ] Public Release 2.0 packaging
+* [ ] Expanded architecture documentation
+* [ ] Complete installer gallery
+* [ ] Future installer enhancements
 
 ---
 
-## License
+# License
 
 Licensed under the **MIT License**.

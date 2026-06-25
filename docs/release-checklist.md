@@ -1,301 +1,192 @@
 # Release Checklist
 
-Comprehensive validation checklist for every **NFS Legacy Modpack** release.
+Comprehensive validation checklist for every **NFS Legacy Modpacks** release.
 
-A release should never be published without passing every section below.
+This checklist is the final quality gate before publishing any public release.
+
+A release must successfully complete every applicable section before it is considered ready.
 
 ---
 
-# 1. Installer Compilation Validation
+# 1. Source Validation
 
-Before testing anything, confirm the installer compiles correctly in **Inno Setup Compiler**.
+Confirm the repository reflects the intended release.
 
 ## Required checks
 
-* [ ] Script compiles successfully
-* [ ] No compiler errors
-* [ ] No unexpected warnings
-* [ ] Output installer generated correctly
-* [ ] Correct installer filename/version
+* [ ] README updated
+* [ ] CHANGELOG updated
+* [ ] Documentation reviewed
+* [ ] Inno Setup scripts updated
+* [ ] SetupLauncher source updated
+* [ ] LegacyUI source updated
+* [ ] ArcRunner source updated
+* [ ] Splash source updated
+
+---
+
+# 2. Build Validation
+
+Compile every required component.
+
+## Required checks
+
+* [ ] SetupLauncher published (Release)
+* [ ] LegacyUI published (Release)
+* [ ] Backend installer compiled
+* [ ] ArcRunner compiled
+* [ ] Splash compiled
 
 ## Verify
 
 Confirm:
 
-* Correct `.arc` archive is referenced
-* Correct splash image is referenced
-* Correct icon file is referenced
-* Correct game executable name is configured
-* Correct version number is set
-
-Example:
-
-```ini
-#define MyAppVersion "1.4.0"
-```
+* Correct version numbers
+* Correct icons
+* Correct resources
+* No compiler errors
+* No unexpected warnings
 
 ---
 
-# 2. Installation Validation
+# 3. Deployment Validation
 
-Perform a complete installation test on a **clean patched vanilla game**.
+Verify the deployment package.
 
 ## Required checks
 
-* [ ] Installer launches
+* [ ] backend.exe copied to `_backend`
+* [ ] setup_launcher.ini generated
+* [ ] AppId verified
+* [ ] Launcher icon verified
+* [ ] Backend path verified
+* [ ] Game identifier verified
+* [ ] Silent arguments verified
+
+---
+
+# 4. Installation Validation
+
+Perform a complete installation on a clean patched game.
+
+## Required checks
+
+* [ ] SetupLauncher launches
 * [ ] Splash screen works
-* [ ] Game path auto-detection works
-* [ ] Patch validation warning behaves correctly
+* [ ] LegacyUI starts correctly
+* [ ] Backend launches
+* [ ] Game detection works
+* [ ] Installation validation succeeds
 * [ ] Archive extraction completes
-* [ ] Progress bar works
+* [ ] Progress reporting works
 * [ ] Installation completes successfully
-* [ ] No unexpected installer errors
 
 ## Verify
 
-Confirm:
+Confirm the installer generates:
 
-* `_LegacyInstaller` folder is created
-* `install_manifest.txt` is generated
-* `unins000.exe` exists
-* `unins000.dat` exists
-
-Example expected structure:
-
-```txt
-_LegacyInstaller/
+```text
+_LegacyInstaller
+│
 ├── install_manifest.txt
+├── new_files_manifest.txt
+├── RestoreData
+│   └── Backup
 ├── unins000.exe
 └── unins000.dat
 ```
 
 ---
 
-# 3. Manifest Validation
+# 5. Manifest Validation
 
-The manifest is the source of truth for uninstall cleanup.
+Verify rollback metadata.
 
 ## Required checks
 
-* [ ] `install_manifest.txt` exists
-* [ ] Manifest contains installed files
-* [ ] Paths are relative
+* [ ] install_manifest.txt generated
+* [ ] new_files_manifest.txt generated
+* [ ] Relative paths only
 * [ ] No duplicate entries
-* [ ] Manifest excludes protected folders
+* [ ] Protected folders excluded
 
-## Must NOT include
+Protected folders:
 
-```txt
-Backup\
-_LegacyInstaller\
-```
-
-## Verify manually
-
-Example command:
-
-```powershell
-Get-Content ".\_LegacyInstaller\install_manifest.txt" | Select-Object -First 20
-```
-
-Expected result:
-
-```txt
-CARS\350Z\GEOMETRY.BIN
-CARS\350Z\TEXTURES.BIN
-GLOBAL\GlobalB.lzc
-...
+```text
+RestoreData
+_LegacyInstaller
 ```
 
 ---
 
-# 4. Rollback Validation (Critical)
+# 6. Optional Components
 
-Every release **must pass rollback validation**.
+Verify optional installer content.
 
-This confirms the game returns to the exact vanilla patched state after uninstall.
+## Required checks
 
-## Validation flow
-
-### Step 1 — Generate baseline hash
-
-Run on a **clean patched vanilla game**:
-
-```powershell
-Remove-Item ".\baseline_vanilla.csv" -Force -ErrorAction SilentlyContinue
-Remove-Item ".\after_install.csv" -Force -ErrorAction SilentlyContinue
-Remove-Item ".\after_uninstall.csv" -Force -ErrorAction SilentlyContinue
-```
-
-Generate baseline:
-
-```powershell
-Get-ChildItem -Recurse -File |
-Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
-} |
-Get-FileHash -Algorithm SHA256 |
-Select-Object Path, Hash |
-Export-Csv ".\baseline_vanilla.csv" -NoTypeInformation
-```
+* [ ] Optional components install correctly
+* [ ] Optional components uninstall correctly
+* [ ] MOVIES package verified (where applicable)
+* [ ] Title-specific options verified
 
 ---
 
-### Step 2 — Install modpack
+# 7. Rollback Validation (Critical)
 
-Run installer normally.
+Rollback validation is mandatory.
 
-Complete installation.
+Validation workflow:
 
----
+* [ ] Install modpack
+* [ ] Verify modpack functionality
+* [ ] Run Restore Tool
+* [ ] Restore original files
+* [ ] Remove newly installed files
+* [ ] Remove empty folders
+* [ ] Compare against clean patched reference
 
-### Step 3 — Generate post-install hash
-
-```powershell
-Get-ChildItem -Recurse -File |
-Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
-} |
-Get-FileHash -Algorithm SHA256 |
-Select-Object Path, Hash |
-Export-Csv ".\after_install.csv" -NoTypeInformation
-```
-
----
-
-### Step 4 — Run uninstaller
+PowerShell verification:
 
 ```powershell
-Start-Process ".\_LegacyInstaller\unins000.exe" -Wait
-```
-
----
-
-### Step 5 — Generate post-uninstall hash
-
-```powershell
-Get-ChildItem -Recurse -File |
-Where-Object {
-    $_.FullName -notmatch '\\Backup\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
-} |
-Get-FileHash -Algorithm SHA256 |
-Select-Object Path, Hash |
-Export-Csv ".\after_uninstall.csv" -NoTypeInformation
-```
-
----
-
-### Step 6 — Compare hashes
-
-```powershell
-$baseline = Import-Csv ".\baseline_vanilla.csv"
-$after = Import-Csv ".\after_uninstall.csv"
-
 Compare-Object `
 -ReferenceObject $baseline `
 -DifferenceObject $after `
 -Property Path, Hash
 ```
 
----
+Expected result:
 
-## Expected Result
-
-Correct rollback:
-
-```txt
+```text
 (no output)
 ```
 
-This means:
+This confirms:
 
-* All modded files removed
-* All original files restored
+* Original files restored
+* Modded files removed
 * No leftovers remain
-* Game matches vanilla patched state
+* Installation matches the clean patched reference
 
 ---
 
-## Failure Conditions
+# 8. Game Validation
 
-If output appears:
-
-```txt
-Path                           Hash
-----                           ----
-nextgenfx_settings.ini         XXXXX
-```
-
-The rollback **failed**.
-
-Required action:
-
-1. Identify leftover file
-2. Add cleanup logic to uninstaller
-3. Rebuild installer
-4. Re-test
-5. Repeat until comparison returns **no output**
-
-A release is **invalid** until rollback passes.
-
----
-
-# 5. Backup Restoration Validation
-
-The backup system must fully restore overwritten vanilla files.
+Verify the installed modpack.
 
 ## Required checks
 
-* [ ] Backup folder exists
-* [ ] Original files restored
-* [ ] Existing files overwritten safely
-* [ ] Read-only files handled correctly
-* [ ] Protected files restored successfully
-
-## Verify
-
-Confirm:
-
-* No missing game assets
-* Game launches after uninstall
-* Vanilla files restored correctly
+* [ ] Game launches
+* [ ] Modpack functions correctly
+* [ ] Required files installed
+* [ ] No missing assets
+* [ ] No installation corruption
 
 ---
 
-# 6. Uninstall Validation
+# 9. Repository Validation
 
-Confirm uninstall process behaves correctly.
-
-## Required checks
-
-* [ ] Manifest deletion runs
-* [ ] Backup restoration runs
-* [ ] Empty directories removed
-* [ ] Installer leftovers preserved correctly
-* [ ] No unexpected files remain
-
-## Correct uninstall order
-
-```txt
-1. DeleteFilesFromManifest
-2. RestoreBackupFiles
-3. Special cleanup (if required)
-4. RemoveEmptyDirectories
-```
-
-Example special cleanup:
-
-```txt
-nextgenfx_settings.ini
-```
-
----
-
-# 7. Git Validation
-
-Before publishing:
-
-Check repository state:
+Before release:
 
 ```powershell
 git status
@@ -303,54 +194,73 @@ git status
 
 Expected:
 
-```txt
+```text
 working tree clean
 ```
 
-Verify latest commits:
+Verify recent commits:
 
 ```powershell
 git log --oneline -5
 ```
 
-Push latest changes:
+---
 
-```powershell
-git add .
-git commit -m "Describe change"
-git push
-```
+# 10. Release Preparation
+
+Before publishing:
+
+* [ ] Version number updated
+* [ ] Installer filename verified
+* [ ] SHA-256 generated
+* [ ] Git tag created
+* [ ] GitHub Release prepared
+* [ ] Release notes updated
+* [ ] Screenshots updated (if required)
+* [ ] Repository synchronized
 
 ---
 
-# 8. GitHub Release Preparation
+# Release Criteria
 
-Before release:
+A release is considered valid only when all applicable requirements have passed.
+
+## Engineering
+
+* [ ] Components compile successfully
+* [ ] Deployment package validated
+* [ ] Installation completed
+* [ ] Rollback completed
+* [ ] RestoreData verified
+
+## Validation
+
+* [ ] Game functions correctly
+* [ ] Compare-Object returns no differences
+* [ ] Restored installation matches clean patched reference
+
+## Documentation
 
 * [ ] README updated
 * [ ] CHANGELOG updated
-* [ ] Screenshots updated
-* [ ] Documentation updated
-* [ ] Version number updated
-* [ ] Installer filename correct
-* [ ] Repository synced
+* [ ] Documentation synchronized
+
+## Release
+
+* [ ] SHA-256 generated
+* [ ] GitHub Release created
+* [ ] Public installer uploaded
 
 ---
 
-# 9. Release Criteria
+# Release Philosophy
 
-A release is considered **valid** only if all conditions below are true:
+No public release should be published until every applicable validation step has passed.
 
-* Installer compiles
-* Installation succeeds
-* Uninstall succeeds
-* Manifest generated correctly
-* Backup restoration works
-* Rollback validation passes
-* SHA256 comparison returns **no output**
-* Repository is synced
-* Documentation updated
+The primary objective of every release is to guarantee:
 
-If any requirement fails:
-
-**DO NOT RELEASE**
+1. Deterministic installation.
+2. Deterministic rollback.
+3. Restoration to the original patched game state.
+4. Reproducible release artifacts.
+5. A consistent installer experience across all supported Need for Speed titles.
