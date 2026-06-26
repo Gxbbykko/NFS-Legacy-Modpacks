@@ -2,13 +2,45 @@
 
 > **A preservation-focused installer framework for the classic PC Need for Speed titles (2003–2008).**
 
-NFS Legacy Modpacks is an open-source project dedicated to preserving and modernizing the installation experience of the classic **Need for Speed** games while respecting their original gameplay, art direction, and identity.
+<!-- Optional GitHub badges (replace URLs after first public release) -->
 
-Rather than recreating or remastering the games, this project provides a standardized installer framework that integrates carefully selected community-made improvements into a safe, reproducible, and fully reversible installation process.
+```text
+[MIT License] [Release 2.0] [Windows] [C#] [Inno Setup] [PowerShell]
+```
 
-Every installer is built around a shared **Release 2.0 architecture**, combining a modern user interface, deterministic rollback, comprehensive validation, and standardized deployment across every supported title.
+NFS Legacy Modpacks is an open-source preservation project dedicated to modernizing the installation experience of the classic PC **Need for Speed** titles while respecting their original gameplay, artistic direction, and identity.
 
-The project emphasizes installation reliability, restoration safety, and long-term maintainability above feature count, ensuring that users can always return their game to its original patched state.
+Rather than recreating or remastering the games, the project provides a standardized installer framework that integrates carefully selected community-created improvements into a safe, reproducible, and fully reversible installation process.
+
+Every supported title is built upon the shared **Release 2.0** installer architecture, combining a modern launcher, a dedicated installation interface, deterministic rollback, comprehensive validation, and a standardized deployment workflow.
+
+The project's highest priorities are installer reliability, restoration safety, and long-term maintainability, ensuring users can always return their installation to its original patched state.
+
+---
+
+# Contents
+
+* Project Philosophy
+* Supported Games
+* Quick Start
+* Mandatory Requirements
+* Release 2.0 Highlights
+* Features
+* Gallery
+* Installer Architecture
+* Installation Workflow
+* Rollback Architecture
+* Validation Methodology
+* Repository Structure
+* Documentation
+* Current Project Status
+* Roadmap
+* Contributing
+* Project Principles
+* License
+* Legal Notice
+* Acknowledgements
+* Final Statement
 
 ---
 
@@ -16,26 +48,26 @@ The project emphasizes installation reliability, restoration safety, and long-te
 
 The primary objective of NFS Legacy Modpacks is **preservation rather than replacement**.
 
-The project does not attempt to redesign the games or replace their original artistic direction. Instead, it focuses on restoring and enhancing the original experience using community-created improvements that remain faithful to the vanilla games.
+The project does not attempt to redesign the original games or replace their artistic direction. Instead, it focuses on restoring and enhancing the original experience through carefully selected community-developed improvements that remain faithful to the vanilla games.
 
-Every design decision follows the same principles:
+Every engineering decision follows the same guiding principles:
 
 * Preserve the original game identity.
 * Improve compatibility and usability.
-* Keep the installation process simple.
+* Keep installation predictable and reproducible.
 * Guarantee deterministic rollback.
-* Never permanently modify the user's installation.
-* Maintain a unified architecture across every supported title.
+* Never permanently modify a user's installation.
+* Maintain a unified installer architecture across every supported title.
 
-Installation success is only one part of the engineering process.
+Installation success represents only one half of the engineering process.
 
-A release is considered complete only when the installer is capable of restoring the original patched installation without leaving residual files or modifying the user's game beyond the intended installation.
+A release is considered complete only when uninstalling the modpack restores the original patched installation without leaving residual files or altering the game's validated baseline.
 
 ---
 
 # Supported Games
 
-Release 2.0 currently supports every classic Black Box Need for Speed title released for PC between 2003 and 2008.
+Release 2.0 supports every classic Black Box Need for Speed title released for PC between 2003 and 2008.
 
 | Game                         | Release Year |          Required Version         |    Status   |
 | ---------------------------- | :----------: | :-------------------------------: | :---------: |
@@ -46,7 +78,24 @@ Release 2.0 currently supports every classic Black Box Need for Speed title rele
 | Need for Speed ProStreet     |     2007     |              **1.1**              | ✅ Supported |
 | Need for Speed Undercover    |     2008     |            **1.0.0.1**            | ✅ Supported |
 
-Every supported title shares the same Release 2.0 installer framework, rollback engine, deployment workflow, and validation methodology.
+Every supported title shares the same installer framework, rollback engine, validation methodology, and deployment workflow.
+
+---
+
+# Quick Start
+
+Before installing any NFS Legacy Modpack:
+
+1. Install the original PC version of the game.
+2. Update the game to the latest officially supported version.
+3. Apply the **Large Address Aware (4GB Patch)** where required.
+4. Launch the installer.
+5. Select the correct game directory.
+6. Allow validation to complete.
+7. Install the modpack.
+8. Launch and enjoy the game.
+
+To remove the modpack, run the included **Restore Tool**, which restores the original patched installation using the Release 2.0 rollback system.
 
 ---
 
@@ -54,210 +103,175 @@ Every supported title shares the same Release 2.0 installer framework, rollback 
 
 > **MANDATORY**
 >
-> Every installer validates these requirements before installation. Unsupported game installations are intentionally rejected to prevent broken installs and unreliable rollback behavior.
+> Every installer validates these requirements before installation. Unsupported installations are intentionally rejected to prevent unreliable installs and incomplete rollback.
 
 Before installing any NFS Legacy Modpack, ensure that:
 
-* The game is updated to the latest officially supported version.
-* The game is installed on a clean, unmodified installation.
+* The game has been updated to the latest officially supported version.
+* The installation is clean and unmodified.
 * The executable has the **Large Address Aware (4GB Patch)** applied where required.
-* The installation directory has not been modified by incompatible tools or unofficial patches.
+* The installation directory has not been modified by incompatible patches or unsupported tools.
 * You legally own the original game.
 
-These requirements are enforced because the Release 2.0 installer architecture relies on deterministic validation before deploying any files.
+These requirements are enforced because the Release 2.0 installer architecture performs mandatory validation before any files are deployed.
+
+Failure to satisfy these requirements may prevent installation from continuing.
 
 ---
 
 # Release 2.0 Highlights
 
-Release 2.0 represents the largest architectural milestone of the project.
+Release 2.0 represents the completion of the standardized installer framework shared across every supported title.
 
-Major improvements include:
+Major milestones include:
 
-### Unified Installer Framework
+## Unified Installer Architecture
 
-* Shared installer architecture across all supported games.
-* Modern SetupLauncher bootstrapper.
-* LegacyUI installation interface.
-* Hidden Inno Setup backend.
-* ArcRunner extraction controller.
-* FreeArc payload extraction.
+Every supported game now shares a common installer platform consisting of:
 
----
+* SetupLauncher
+* LegacyUI
+* Inno Setup Backend
+* ArcRunner
+* FreeArc
+* RestoreData Rollback
 
-### Deterministic Rollback
-
-Every installer includes the standardized **RestoreData** rollback architecture.
-
-Features include:
-
-* Automatic backup of overwritten files.
-* Tracking of newly installed files.
-* Manifest-driven uninstall.
-* Automatic restoration of original game files.
-* Automatic cleanup of empty directories.
-* Deterministic rollback validation using SHA-256 comparison.
+This architecture provides a consistent installation experience while allowing title-specific validation and optional component handling.
 
 ---
 
-### Validation-First Installation
+## Deterministic Rollback
 
-Before installation begins, every installer validates:
+Release 2.0 introduces a standardized rollback engine capable of restoring the original patched game installation after uninstall.
 
-* Supported game executable.
-* Required game version.
-* Large Address Aware (4GB Patch) status.
-* Required game folders.
-* Critical file integrity.
-* Installer configuration.
+The rollback system includes:
 
-Unsupported installations are rejected before any files are modified.
+* Changed-file backup
+* Manifest-driven uninstall
+* Automatic restoration of overwritten files
+* Automatic removal of newly installed files
+* Empty directory cleanup
+* SHA-256 validation support
 
 ---
 
-### Standardized Deployment
+## Shared Validation Framework
 
-Every supported title follows the same engineering workflow:
+Every supported title now follows the same validation methodology.
 
-```text
-SetupLauncher
-        │
-        ▼
-LegacyUI
-        │
-        ▼
-Inno Setup Backend
-        │
-        ▼
-ArcRunner
-        │
-        ▼
-FreeArc
-        │
-        ▼
-Game Installation
-        │
-        ▼
-RestoreData Rollback
-```
+Validation includes:
 
-This architecture is shared across every Release 2.0 installer and serves as the foundation for future development.
+* Game executable verification
+* Latest official patch verification
+* Large Address Aware verification
+* Required directory validation
+* Critical file validation
+* Installation integrity verification
+
+---
+
+## Repository Standardization
+
+The repository has been reorganized into a consistent structure including:
+
+* Shared installer templates
+* Source code for all installer components
+* Engineering documentation
+* Release documentation
+* Screenshot galleries
+* Validation methodology
+* Release engineering standards
 
 ---
 
 # Features
 
-The Release 2.0 installer framework provides:
+Release 2.0 provides a consistent feature set across every supported installer.
+
+## Installer
+
+* Modern SetupLauncher bootstrap
+* LegacyUI installation interface
+* Automatic game detection
+* Mandatory installation validation
+* Live installation progress
+* Optional component support
+* External package framework
+* Silent backend execution
+
+---
 
 ## Installation
 
-* Automatic game detection.
-* Installation validation.
-* Live installation progress.
-* Optional component support.
-* Standardized deployment workflow.
-* Unified installation experience across all supported titles.
+* Standardized deployment workflow
+* FreeArc extraction pipeline
+* ArcRunner extraction controller
+* Automatic file deployment
+* Installation logging
+* Manifest generation
+* Restore metadata generation
+
+---
 
 ## Rollback
 
-* RestoreData rollback architecture.
-* Automatic backup restoration.
-* Manifest-driven uninstall.
-* Removal of newly installed files.
-* Empty directory cleanup.
-* Deterministic restoration.
+* RestoreData architecture
+* Backup of overwritten files only
+* install_manifest.txt tracking
+* new_files_manifest.txt tracking
+* Automatic restoration
+* Automatic cleanup
+* Deterministic uninstall workflow
+
+---
 
 ## Validation
 
-* Mandatory requirement verification.
-* SHA-256 rollback validation.
-* Gameplay verification.
-* Installation verification.
-* Repository-wide engineering standards.
-* Reproducible release methodology.
+* SHA-256 comparison workflow
+* Compare-Object verification
+* Clean rollback validation
+* Gameplay verification
+* Installation verification
+* Release reproducibility
+
+---
 
 # Gallery
 
-The repository includes an extensive collection of screenshots documenting the Release 2.0 installer framework.
+Every supported title contains a dedicated release gallery documenting the installer and validation workflow.
 
-The gallery serves both as visual documentation and as engineering evidence demonstrating installation behavior, validation workflows, rollback verification, and gameplay preservation.
+Gallery documentation includes:
 
-Screenshots are organized by supported title and validation category to ensure every public release remains transparent and reproducible.
-
----
-
-## Gallery Categories
-
-Each supported title contains its own gallery documenting the complete installation lifecycle.
-
-Typical gallery contents include:
-
-### Mandatory Requirements
-
-Documentation proving the required game version and Large Address Aware (4GB Patch) implementation.
-
-Examples include:
-
-* Executable version information
-* Large Address Aware verification
-* Supported game executable
-* Required patch verification
-
----
-
-### Installer Workflow
-
-Visual documentation of the Release 2.0 installer experience.
-
-Typical screenshots include:
-
-* SetupLauncher
-* Splash screen
-* LegacyUI
-* Game detection
+* Mandatory installation requirements
+* Installer workflow
 * Installation progress
-* Successful installation
-* Restore Tool
+* Main menu comparisons
+* Gameplay comparisons
+* Rollback validation
+* Restore Tool workflow
+* SHA-256 verification
+* Version validation
+* Large Address Aware verification
 
----
+Release galleries are located under:
 
-### Rollback Validation
+```text
+releases/
+├── Underground/
+├── Underground2/
+├── MostWanted/
+├── Carbon/
+├── ProStreet/
+└── Undercover/
+```
 
-Engineering proof demonstrating deterministic restoration.
-
-Typical screenshots include:
-
-* RestoreData structure
-* install_manifest.txt
-* new_files_manifest.txt
-* Backup directory
-* Compare-Object verification
-* Successful rollback
-
----
-
-### Gameplay Comparison
-
-Each release also documents the installed modpack through gameplay comparisons.
-
-Typical captures include:
-
-* Main Menu
-* Frontend improvements
-* Visual enhancements
-* Gameplay screenshots
-
-Where appropriate, before and after comparisons are included to demonstrate the changes introduced by the modpack while preserving the original artistic style of the game.
+These galleries serve as visual documentation for both users and contributors while demonstrating the Release 2.0 validation methodology.
 
 ---
 
 # Installer Architecture
 
-Every supported title shares the same Release 2.0 architecture.
-
-Unlike traditional game mod installers, NFS Legacy Modpacks separates the installation process into dedicated components responsible for launching, user interaction, deployment, extraction, validation, and rollback.
-
-This layered architecture improves maintainability, simplifies debugging, and guarantees identical behavior across all supported titles.
+Every installer included in NFS Legacy Modpacks follows the same engineering architecture.
 
 ```text
 SetupLauncher
@@ -281,120 +295,33 @@ Game Installation
 RestoreData Rollback
 ```
 
-Every layer performs a dedicated responsibility before handing control to the next stage.
+Each component has a dedicated responsibility.
 
----
+| Component          | Purpose                                       |
+| ------------------ | --------------------------------------------- |
+| SetupLauncher      | Bootstrap launcher and backend initialization |
+| LegacyUI           | Modern installation interface                 |
+| Inno Setup Backend | Core installation engine                      |
+| ArcRunner          | Extraction controller                         |
+| FreeArc            | Payload extraction                            |
+| RestoreData        | Rollback infrastructure                       |
 
-## SetupLauncher
-
-SetupLauncher is the public entry point for every Release 2.0 installer.
-
-Responsibilities include:
-
-* Launcher bootstrap
-* Backend discovery
-* AppId verification
-* Launcher configuration
-* Installer initialization
-
----
-
-## LegacyUI
-
-LegacyUI provides the modern installation interface presented to the user.
-
-Responsibilities include:
-
-* Installation interface
-* Progress reporting
-* Status updates
-* Optional component selection
-* Communication with the backend installer
-
-LegacyUI intentionally separates presentation from deployment logic, allowing the installer backend to remain stable while the user experience continues to evolve.
-
----
-
-## Inno Setup Backend
-
-The backend installer performs all installation logic.
-
-Responsibilities include:
-
-* Installation validation
-* File deployment
-* Manifest generation
-* RestoreData creation
-* Uninstaller generation
-* Rollback orchestration
-
-The backend remains hidden from the user while LegacyUI provides the complete installation experience.
-
----
-
-## ArcRunner
-
-ArcRunner acts as the extraction controller between the installer backend and FreeArc.
-
-Responsibilities include:
-
-* Launching archive extraction
-* Monitoring extraction progress
-* Reporting extraction status
-* Generating extraction logs
-* Communicating progress back to LegacyUI
-
----
-
-## FreeArc
-
-FreeArc is used as the payload extraction engine.
-
-Responsibilities include:
-
-* High-compression archive support
-* Fast extraction
-* Deterministic archive deployment
-* Reduced download size
-
-Every title uses standardized archive packaging to maintain consistent installer behavior.
-
----
-
-## RestoreData
-
-RestoreData is the foundation of the rollback system.
-
-Unlike traditional uninstallers, RestoreData focuses on deterministic restoration rather than simple file removal.
-
-Responsibilities include:
-
-* Backing up overwritten original files
-* Tracking newly installed files
-* Restoring original content
-* Removing newly created files
-* Cleaning empty directories
-* Returning the installation to its original patched state
-
-RestoreData guarantees that uninstalling a supported modpack leaves the game functionally identical to its validated pre-installation state.
+This modular architecture simplifies maintenance while ensuring identical behavior across every supported title.
 
 ---
 
 # Installation Workflow
 
-Every Release 2.0 installer follows the same standardized workflow.
+Every installer follows the same validated workflow.
 
 ```text
-Launcher
-        │
-        ▼
-Mandatory Validation
+Launch Installer
         │
         ▼
 Game Detection
         │
         ▼
-Installation Configuration
+Mandatory Validation
         │
         ▼
 Archive Extraction
@@ -406,21 +333,20 @@ File Deployment
 Manifest Generation
         │
         ▼
-RestoreData Creation
-        │
-        ▼
 Installation Complete
 ```
 
-This workflow is identical across every supported title, ensuring a predictable installation experience regardless of the selected game.
+Rollback metadata is generated automatically during installation.
+
+The installer records every required file to guarantee deterministic restoration during uninstall.
 
 ---
 
 # Rollback Architecture
 
-Rollback is considered a primary feature of the project rather than an optional convenience.
+Rollback safety is a core design principle of Release 2.0.
 
-Every installer generates rollback metadata inside the game directory.
+Each installation creates the following structure:
 
 ```text
 _LegacyInstaller
@@ -431,13 +357,13 @@ _LegacyInstaller
     └── Backup
 ```
 
-During uninstall, the Release 2.0 rollback engine performs the following sequence:
+The rollback engine performs restoration in the following order:
 
 ```text
-Delete New Files
+Delete Newly Installed Files
         │
         ▼
-Restore Original Files
+Restore Overwritten Originals
         │
         ▼
 Title-Specific Cleanup
@@ -446,270 +372,180 @@ Title-Specific Cleanup
 Remove Empty Directories
         │
         ▼
-Rollback Verification
+Rollback Complete
 ```
 
-The same rollback methodology is shared across every supported Need for Speed title, providing a consistent and reproducible restoration workflow.
+Only files that are actually overwritten are backed up, minimizing storage requirements while preserving complete restoration capability.
+
+---
 
 # Validation Methodology
 
-Every Release 2.0 installer is validated using the same engineering methodology before it is considered ready for public release.
+Every public release follows the same validation process before publication.
 
-Validation extends beyond verifying that an installer completes successfully. Every release must demonstrate that installation, gameplay, rollback, and restoration all function correctly without compromising the original game installation.
+Validation is performed against a **clean, fully patched reference installation** and consists of installation verification, gameplay verification, rollback verification, and SHA-256 filesystem comparison.
 
-The validation workflow is identical across every supported title.
+Validation workflow:
 
-```text id="7jykmu"
-Clean Patched Game
+```text
+Clean Patched Installation
         │
         ▼
-Mandatory Requirements Verified
+Baseline Snapshot
         │
         ▼
-Installation
+Install Modpack
         │
         ▼
 Gameplay Verification
         │
         ▼
-Rollback
+Run Restore Tool
         │
         ▼
-Compare-Object
+Rollback Verification
         │
         ▼
-Release Validation
+SHA-256 Compare-Object Validation
 ```
 
-A release is considered valid only when every stage completes successfully.
+A successful validation confirms:
 
----
-
-## Mandatory Requirements Validation
-
-Before installation begins, every installer verifies that the selected game installation satisfies the required conditions.
-
-Validation includes:
-
-* Correct game executable.
-* Required official game version.
-* Large Address Aware (4GB Patch).
-* Required folder structure.
-* Critical game files.
-* Installer compatibility.
-
-This validation prevents unsupported installations from being modified.
-
----
-
-## Installation Validation
-
-During installation, the following components are verified:
-
-* SetupLauncher
-* LegacyUI
-* Backend installer
-* ArcRunner
-* FreeArc extraction
-* File deployment
-* Manifest generation
-* RestoreData generation
-
-Installation must complete without errors before gameplay verification begins.
-
----
-
-## Gameplay Verification
-
-Every supported title is tested after installation.
-
-Gameplay verification confirms:
-
-* Successful game launch.
-* Correct frontend behavior.
-* Required assets loaded.
-* No missing files.
-* No unexpected crashes.
-* Expected modpack functionality.
-
-Gameplay screenshots are included within the repository gallery to document each validated release.
-
----
-
-## Rollback Validation
-
-Rollback validation is mandatory for every public release.
-
-The Restore Tool must successfully:
-
-* Remove newly installed files.
-* Restore overwritten originals.
-* Remove empty directories.
-* Preserve the original patched installation.
-
-The rollback workflow is identical across every supported title.
-
----
-
-## SHA-256 Verification
-
-Rollback integrity is verified using SHA-256 file comparison.
-
-Three filesystem snapshots are generated:
-
-* Baseline installation
-* Post-installation
-* Post-rollback
-
-The restored installation is compared against the original clean patched reference using PowerShell.
-
-Expected result:
-
-```text id="bd5cm0"
-(no output)
-```
-
-No output confirms that the restored installation matches the original reference exactly.
+* Installation completed successfully.
+* Gameplay functions correctly.
+* Rollback restored every overwritten file.
+* Newly installed files were removed.
+* No empty directories remain.
+* The restored installation matches the original patched reference.
 
 ---
 
 # Repository Structure
 
-The repository has been organized around the standardized Release 2.0 architecture.
+The repository is organized into independent components that separate source code, documentation, release assets, and validation resources.
 
-```text id="cmymmh"
+```text
 NFS-Legacy-Modpacks/
 │
 ├── docs/
 ├── releases/
 ├── screenshots/
 ├── source/
+├── templates/
 ├── LICENSE
 ├── CHANGELOG.md
-└── README.md
+├── README.md
+└── .gitignore
 ```
 
-Each directory has a dedicated responsibility within the project.
+Each directory has a dedicated purpose.
 
----
-
-## docs/
-
-Contains the engineering documentation used during development, validation, and release preparation.
-
-Documentation includes:
-
-* Build Notes
-* Release Engineering
-* Rollback Validation
-* Hashing Commands
-* Release Checklist
-* GitHub Release Template
-
----
-
-## releases/
-
-Contains release-specific documentation for every supported title.
-
-Each release directory includes:
-
-* Release README
-* Gallery
-* Release assets (when published)
-
-This directory serves as the public-facing documentation accompanying every installer release.
-
----
-
-## screenshots/
-
-Stores repository-wide screenshots documenting:
-
-* Installer workflow
-* Rollback validation
-* Compare-Object verification
-* Mandatory requirements
-* Gallery examples
-
----
-
-## source/
-
-Contains the complete Release 2.0 installer source code.
-
-Major components include:
-
-* SetupLauncher
-* LegacyUI
-* Inno Setup scripts
-* ArcRunner
-* Splash
-* Shared utilities
-
-Every supported installer is built from this source tree.
+| Directory    | Purpose                                      |
+| ------------ | -------------------------------------------- |
+| docs/        | Engineering and release documentation        |
+| releases/    | Per-title release information and galleries  |
+| screenshots/ | Repository screenshots and validation assets |
+| source/      | Source code for all installer components     |
+| templates/   | Shared installer templates                   |
+| README.md    | Project overview                             |
+| CHANGELOG.md | Project history                              |
+| LICENSE      | Project license                              |
 
 ---
 
 # Documentation
 
-The repository includes extensive engineering documentation describing every aspect of the Release 2.0 installer framework.
+The repository documentation is organized into dedicated engineering references.
 
-| Document                            | Description                             |
-| ----------------------------------- | --------------------------------------- |
-| **README.md**                       | Project overview and architecture       |
-| **CHANGELOG.md**                    | Project development history             |
-| **docs/build-notes.md**             | Internal build workflow                 |
-| **docs/release-engineering.md**     | Release engineering process             |
-| **docs/release-checklist.md**       | Final validation checklist              |
-| **docs/rollback-validation.md**     | Rollback methodology                    |
-| **docs/hashing-commands.md**        | Official PowerShell validation commands |
-| **docs/github-release-template.md** | GitHub Release template                 |
+| Document                                                   | Description                         |
+| ---------------------------------------------------------- | ----------------------------------- |
+| [README.md](README.md)                                     | Project overview                    |
+| [CHANGELOG.md](CHANGELOG.md)                               | Release history                     |
+| [Build Notes](docs/build-notes.md)                         | Internal build workflow             |
+| [Release Checklist](docs/release-checklist.md)             | Release validation checklist        |
+| [Release Engineering](docs/release-engineering.md)         | Engineering and publishing workflow |
+| [Rollback Validation](docs/rollback-validation.md)         | Rollback methodology                |
+| [Hashing Commands](docs/hashing-commands.md)               | SHA-256 validation commands         |
+| [GitHub Release Template](docs/github-release-template.md) | Standardized release notes template |
 
-All documentation is maintained together with the source code to ensure every release remains reproducible and fully documented.
+These documents collectively describe the engineering practices, validation methodology, release process, and repository standards used throughout the project.
+
+---
+
+# Release Galleries
+
+Each supported title includes its own release documentation and validation gallery.
+
+```text
+releases/
+├── Underground/
+├── Underground2/
+├── MostWanted/
+├── Carbon/
+├── ProStreet/
+└── Undercover/
+```
+
+Each release directory contains:
+
+* Release README
+* Validation screenshots
+* Gameplay comparisons
+* Installer workflow
+* Mandatory requirements
+* Rollback proof
+* Version verification
+* Large Address Aware verification
+
+These galleries provide visual documentation of the Release 2.0 installer framework without distributing copyrighted game assets.
 
 ---
 
 # Current Project Status
 
-Release 2.0 represents the completion of the unified installer framework.
+## Repository
 
-Current project status:
+| Component               |   Status   |
+| ----------------------- | :--------: |
+| Documentation           | ✅ Complete |
+| Installer Framework     | ✅ Complete |
+| Rollback Architecture   | ✅ Complete |
+| Validation Workflow     | ✅ Complete |
+| Release Engineering     | ✅ Complete |
+| Repository Organization | ✅ Complete |
 
-| Component                      |   Status   |
-| ------------------------------ | :--------: |
-| Unified Installer Architecture | ✅ Complete |
-| SetupLauncher                  | ✅ Complete |
-| LegacyUI                       | ✅ Complete |
-| Inno Setup Backend             | ✅ Complete |
-| ArcRunner                      | ✅ Complete |
-| RestoreData Rollback           | ✅ Complete |
-| Six Supported Titles           | ✅ Complete |
-| Validation Workflow            | ✅ Complete |
-| Engineering Documentation      | ✅ Complete |
-| Repository Standardization     | ✅ Complete |
-| Gallery Documentation          | ✅ Complete |
-| Release Framework              |   ✅ Ready  |
+---
 
-The remaining work primarily consists of publishing validated public releases as development of individual modpacks progresses.
+## Supported Titles
+
+| Game                         | Installer | Rollback | Validation |
+| ---------------------------- | :-------: | :------: | :--------: |
+| Need for Speed Underground   |     ✅     |     ✅    |      ✅     |
+| Need for Speed Underground 2 |     ✅     |     ✅    |      ✅     |
+| Need for Speed Most Wanted   |     ✅     |     ✅    |      ✅     |
+| Need for Speed Carbon        |     ✅     |     ✅    |      ✅     |
+| Need for Speed ProStreet     |     ✅     |     ✅    |      ✅     |
+| Need for Speed Undercover    |     ✅     |     ✅    |      ✅     |
+
+Release 2.0 establishes a unified engineering baseline shared across every supported title.
+
+---
 
 # Roadmap
 
-Release 2.0 establishes the long-term foundation for every future NFS Legacy Modpacks release.
-
-Future development will continue building upon the standardized installer architecture while preserving full compatibility with the Release 2.0 engineering principles.
+Future development will continue building upon the Release 2.0 framework while preserving compatibility with the existing installer architecture.
 
 Planned future work includes:
 
-* Continued maintenance of the installer framework.
-* Compatibility updates where required.
-* Additional installer polish.
-* Expanded documentation.
-* Additional gameplay galleries.
-* Future quality-of-life improvements.
-* Ongoing validation and testing.
+* Installer maintenance
+* Compatibility updates
+* Community-requested improvements
+* Documentation expansion
+* Additional release galleries
+* Quality-of-life improvements
+* Ongoing validation
 
-Any future architectural changes will continue using the NFSU implementation as the reference architecture before being adopted by the remaining supported titles.
+Future architectural work will continue using the **Need for Speed Underground** implementation as the reference baseline before being adopted by the remaining supported titles.
 
 ---
 
@@ -717,62 +553,51 @@ Any future architectural changes will continue using the NFSU implementation as 
 
 Contributions are welcome.
 
-The project values improvements that preserve the existing engineering philosophy and maintain compatibility across every supported title.
+Areas where contributors can help include:
 
-Areas where contributions may be valuable include:
+* Installer improvements
+* Documentation
+* Testing
+* Bug fixes
+* Validation tooling
+* User interface improvements
+* Translation updates
 
-* Installer improvements.
-* Documentation.
-* Validation tooling.
-* Bug fixes.
-* Testing.
-* User interface refinements.
-* Translation improvements.
-* Community feedback.
-
-Before submitting significant architectural changes, contributors are encouraged to review the engineering documentation contained in the `docs/` directory to ensure compatibility with the Release 2.0 framework.
+Before contributing significant architectural changes, please review the documentation in the `docs/` directory to ensure compatibility with the Release 2.0 engineering framework.
 
 ---
 
 # Project Principles
 
-Every contribution should follow the same guiding principles.
+Every contribution should respect the principles that define NFS Legacy Modpacks.
 
 ## Preservation First
 
-The goal of NFS Legacy Modpacks is to preserve the original games rather than redesign them.
-
-Community improvements should respect the original gameplay, atmosphere, and artistic direction.
+Maintain the original gameplay experience while improving compatibility, stability, and usability.
 
 ---
 
 ## Reliability Before Features
 
-Installer reliability always takes priority over introducing new functionality.
-
-A feature that compromises installation safety or rollback integrity is considered unsuitable until it satisfies the project's validation requirements.
+Installer reliability always takes priority over introducing additional functionality.
 
 ---
 
 ## Deterministic Rollback
 
-Every supported installer must remain capable of restoring the game to its original patched state.
-
-Rollback safety is considered a core feature of the project.
+Every supported installer must remain capable of restoring the original patched installation.
 
 ---
 
 ## Reproducible Releases
 
-Every public release should be reproducible using the repository source, documented engineering workflow, and standardized validation process.
+Every public release should be reproducible using the documented engineering workflow and validation methodology.
 
 ---
 
 ## Transparency
 
-Engineering decisions, validation methodology, and release workflows are documented publicly whenever possible.
-
-Repository documentation exists to make every release understandable, reproducible, and maintainable by future contributors.
+Engineering decisions, release workflows, and validation methodologies are documented publicly to ensure long-term maintainability and contributor accessibility.
 
 ---
 
@@ -780,50 +605,85 @@ Repository documentation exists to make every release understandable, reproducib
 
 This project is licensed under the **MIT License**.
 
-See the `LICENSE` file for the complete license text.
+The full license text is available in the `LICENSE` file included with this repository.
 
 ---
 
 # Legal Notice
 
-NFS Legacy Modpacks is an independent community project.
+NFS Legacy Modpacks is an independent community preservation project.
 
-This repository is **not affiliated with, endorsed by, sponsored by, or associated with Electronic Arts Inc., EA Canada, Black Box Games, or any of their subsidiaries or licensors.**
+This repository is **not affiliated with, endorsed by, sponsored by, or associated with Electronic Arts Inc., EA Canada, EA Black Box, or any of their subsidiaries, licensors, or trademark holders.**
 
-Need for Speed and all associated trademarks, logos, and copyrighted materials remain the property of their respective owners.
+Need for Speed and all associated trademarks, logos, artwork, and copyrighted materials remain the property of their respective owners.
 
-This repository does **not** distribute:
+This repository intentionally **does not distribute**:
 
 * Original game files.
-* Copyrighted EA assets.
+* EA copyrighted assets.
 * Commercial game content.
-* Executable game binaries.
-* Archive payloads containing copyrighted game data.
+* Game executables.
+* FreeArc payload archives containing copyrighted material.
+* Proprietary third-party assets.
 
-Users must legally own the original game before using any installer provided by this project.
+Every installer contained within this project has been designed to install community-created enhancements onto a legally owned copy of the original game.
+
+Users are responsible for obtaining the original games through legitimate means and ensuring compliance with all applicable licenses and copyright laws.
 
 ---
 
 # Acknowledgements
 
-NFS Legacy Modpacks would not be possible without the work of the Need for Speed modding community.
+NFS Legacy Modpacks exists thanks to years of work contributed by the Need for Speed community.
 
-The project builds upon years of community research, reverse engineering, compatibility improvements, and restoration work created by countless developers, artists, testers, and enthusiasts.
+The project builds upon the knowledge, research, reverse engineering, compatibility fixes, tooling, testing, and preservation efforts created by countless community developers, artists, and enthusiasts.
 
-Individual mods remain the work of their respective authors and are credited accordingly within each release where applicable.
+Special thanks go to every community member whose work has helped preserve the classic Need for Speed titles for modern hardware and operating systems.
 
-Special appreciation goes to the wider Need for Speed preservation community whose continued efforts have helped keep these classic titles playable on modern systems.
+Individual modifications remain the intellectual work of their respective authors and should always be credited according to their original licenses and distribution terms.
+
+NFS Legacy Modpacks serves as a standardized installation and preservation framework that integrates compatible community projects while respecting their original authorship.
 
 ---
 
 # Final Statement
 
-NFS Legacy Modpacks is more than a collection of game modifications.
+Release 2.0 represents the completion of the first fully standardized installer framework developed for NFS Legacy Modpacks.
 
-It is an engineering-focused preservation project designed to provide a consistent, reliable, and fully documented installation framework for the classic PC Need for Speed series.
+Across all six supported Need for Speed titles, the project now provides:
 
-By combining modern installer technology, deterministic rollback, comprehensive validation, and standardized engineering practices, Release 2.0 establishes a long-term foundation for future public releases while respecting the identity and legacy of the original games.
+* A unified installer architecture.
+* A consistent user experience.
+* Mandatory installation validation.
+* Deterministic rollback.
+* Manifest-driven restoration.
+* RestoreData backup architecture.
+* Standardized release engineering.
+* Comprehensive documentation.
+* Reproducible validation methodology.
 
-Every installer released under this framework is developed with the same objective:
+Rather than simply packaging modifications together, Release 2.0 establishes a maintainable engineering platform that can continue evolving while preserving compatibility, reliability, and restoration safety.
 
-**Preserve the originals. Improve the experience. Always provide a safe path back.**
+Future releases will continue building upon this foundation without compromising the project's core principles of preservation, reproducibility, and deterministic rollback.
+
+---
+
+# Project Status
+
+**Repository Status:** ✅ Release 2.0 Complete
+
+**Installer Framework:** ✅ Complete
+
+**Rollback Architecture:** ✅ Complete
+
+**Engineering Documentation:** ✅ Complete
+
+**Validation Methodology:** ✅ Complete
+
+**Repository Standardization:** ✅ Complete
+
+The repository is now prepared to support future public releases through **GitHub Releases** and **Nexus Mods**, while maintaining a unified engineering workflow across every supported Need for Speed title.
+
+---
+
+> **Preserve the originals. Improve the experience. Always provide a safe path back.**
