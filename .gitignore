@@ -1,7 +1,6 @@
-```gitignore
 # =========================================================
 # NFS Legacy Modpacks - Release 2.0
-# .gitignore
+#.gitignore
 #
 # Excludes build artifacts, generated files, temporary data,
 # installer payloads and local development files while keeping
