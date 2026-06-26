@@ -10,7 +10,7 @@ Rollback validation confirms that every installer restores the original patched 
 
 # Purpose
 
-Every installer included in NFS Legacy Modpacks implements the same rollback architecture.
+Every installer included in NFS Legacy Modpacks implements the same standardized rollback architecture.
 
 The objectives are:
 
@@ -26,7 +26,7 @@ The objectives are:
 
 Each installer creates the following rollback structure inside the game directory.
 
-```text id="z1g9fe"
+```text id="m81jpk"
 _LegacyInstaller
 │
 ├── install_manifest.txt
@@ -55,8 +55,11 @@ Rollback validation is performed using a clean patched game installation.
 
 Validation consists of the following sequence.
 
-```text id="32v5tu"
+```text id="tbvjlwm"
 Clean Patched Game
+        │
+        ▼
+Mandatory Requirements Verified
         │
         ▼
 Generate Baseline
@@ -65,7 +68,7 @@ Generate Baseline
 Install Modpack
         │
         ▼
-Verify Modpack
+Verify Gameplay
         │
         ▼
 Run Restore Tool
@@ -87,7 +90,7 @@ Three snapshots are generated during validation.
 
 Generate a SHA-256 snapshot of the clean patched installation.
 
-```powershell id="t42vh4"
+```powershell id="h8m18y"
 Get-ChildItem -Recurse -File |
 Where-Object {
     $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
@@ -103,7 +106,7 @@ Export-Csv ".\baseline_vanilla.csv" -NoTypeInformation
 
 Generate a snapshot immediately after installation.
 
-```powershell id="9k8rjc"
+```powershell id="tln2hg"
 Get-ChildItem -Recurse -File |
 Where-Object {
     $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
@@ -121,7 +124,7 @@ Run the Restore Tool.
 
 Generate the final snapshot.
 
-```powershell id="a5fov4"
+```powershell id="nxm1jq"
 Get-ChildItem -Recurse -File |
 Where-Object {
     $_.FullName -notmatch '\\RestoreData\\|\\_LegacyInstaller\\|baseline_vanilla\.csv|after_install\.csv|after_uninstall\.csv'
@@ -137,7 +140,7 @@ Export-Csv ".\after_uninstall.csv" -NoTypeInformation
 
 Compare the baseline against the restored installation.
 
-```powershell id="xxtkdh"
+```powershell id="h03ugw"
 $baseline = Import-Csv ".\baseline_vanilla.csv"
 $after = Import-Csv ".\after_uninstall.csv"
 
@@ -153,7 +156,7 @@ Compare-Object `
 
 A successful validation produces:
 
-```text id="5cbdn5"
+```text id="f9g5nq"
 (no output)
 ```
 
@@ -171,7 +174,7 @@ This confirms:
 
 The Release 2.0 rollback engine performs restoration in the following order.
 
-```text id="oqlf9w"
+```text id="vvw0hx"
 Delete new files
         │
         ▼
@@ -197,7 +200,7 @@ Some games require title-specific cleanup during rollback.
 
 Examples include:
 
-* MOVIES package handling
+* HD MOVIES package handling
 * Optional component cleanup
 * Runtime-generated configuration files
 
@@ -210,21 +213,37 @@ These exceptions are handled before the final cleanup phase while preserving the
 Rollback validation has successfully completed for every supported installer.
 
 | Game                         | Validation |
-| ---------------------------- | ---------- |
-| Need for Speed Underground   | ✅ PASS     |
-| Need for Speed Underground 2 | ✅ PASS     |
-| Need for Speed Most Wanted   | ✅ PASS     |
-| Need for Speed Carbon        | ✅ PASS     |
-| Need for Speed ProStreet     | ✅ PASS     |
-| Need for Speed Undercover    | ✅ PASS     |
+| ---------------------------- | :--------: |
+| Need for Speed Underground   |   ✅ PASS   |
+| Need for Speed Underground 2 |   ✅ PASS   |
+| Need for Speed Most Wanted   |   ✅ PASS   |
+| Need for Speed Carbon        |   ✅ PASS   |
+| Need for Speed ProStreet     |   ✅ PASS   |
+| Need for Speed Undercover    |   ✅ PASS   |
 
 Validation included:
 
-* Installation
+* Mandatory requirements verification
+* Installation verification
 * Gameplay verification
-* Rollback
+* Rollback verification
 * Compare-Object verification
+* Gallery documentation
 * Restoration against the clean patched reference
+
+---
+
+# Validation Evidence
+
+Every Release 2.0 validation is documented using:
+
+* Mandatory Requirements proof
+* Installer workflow screenshots
+* Rollback screenshots
+* Compare-Object verification
+* Before / After gameplay comparison
+
+These assets provide reproducible evidence that every supported installer satisfies the Release 2.0 validation requirements.
 
 ---
 
@@ -232,4 +251,4 @@ Validation included:
 
 Rollback is considered successful only when the restored installation is functionally and structurally identical to the original patched installation.
 
-A release is never considered complete until every supported title passes the complete rollback validation workflow.
+A release is never considered complete until every supported title passes the complete rollback validation workflow and all supporting validation evidence has been documented.

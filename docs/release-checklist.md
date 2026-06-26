@@ -22,6 +22,8 @@ Confirm the repository reflects the intended release.
 * [ ] LegacyUI source updated
 * [ ] ArcRunner source updated
 * [ ] Splash source updated
+* [ ] Release READMEs updated
+* [ ] Gallery documentation synchronized
 
 ---
 
@@ -76,6 +78,7 @@ Perform a complete installation on a clean patched game.
 * [ ] LegacyUI starts correctly
 * [ ] Backend launches
 * [ ] Game detection works
+* [ ] Mandatory requirements validated
 * [ ] Installation validation succeeds
 * [ ] Archive extraction completes
 * [ ] Progress reporting works
@@ -204,6 +207,12 @@ Verify recent commits:
 git log --oneline -5
 ```
 
+Confirm:
+
+* [ ] Release galleries updated
+* [ ] Screenshot links verified
+* [ ] Documentation links verified
+
 ---
 
 # 10. Release Preparation
@@ -218,6 +227,8 @@ Before publishing:
 * [ ] Release notes updated
 * [ ] Screenshots updated (if required)
 * [ ] Repository synchronized
+* [ ] Gallery screenshots included
+* [ ] Mandatory requirement proof included
 
 ---
 
@@ -235,6 +246,7 @@ A release is considered valid only when all applicable requirements have passed.
 
 ## Validation
 
+* [ ] Mandatory requirements verified
 * [ ] Game functions correctly
 * [ ] Compare-Object returns no differences
 * [ ] Restored installation matches clean patched reference
@@ -244,12 +256,15 @@ A release is considered valid only when all applicable requirements have passed.
 * [ ] README updated
 * [ ] CHANGELOG updated
 * [ ] Documentation synchronized
+* [ ] Release READMEs updated
+* [ ] Gallery documentation synchronized
 
 ## Release
 
 * [ ] SHA-256 generated
 * [ ] GitHub Release created
 * [ ] Public installer uploaded
+* [ ] Gallery published with release
 
 ---
 
@@ -264,3 +279,4 @@ The primary objective of every release is to guarantee:
 3. Restoration to the original patched game state.
 4. Reproducible release artifacts.
 5. A consistent installer experience across all supported Need for Speed titles.
+6. Complete documentation and validation evidence for every public release.

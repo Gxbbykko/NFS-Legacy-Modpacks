@@ -1,177 +1,361 @@
 ```iss
 ; =========================================================
-; NFS Legacy Modpack - Installer Template
+; NFS Legacy Modpacks - Release 2.0 Installer Template
 ; =========================================================
-; This template is the shared base for future NFS Legacy installers.
-; It is not meant to compile immediately without replacing placeholders.
 ;
-; Main systems included:
-; - Game folder detection
-; - Game file validation
-; - Large Address Aware check
+; This template is the shared baseline architecture for future
+; NFS Legacy Modpacks installers.
+;
+; It is based on the validated Release 2.0 architecture used
+; across all supported titles:
+;
+;   SetupLauncher
+;       -> LegacyUI
+;       -> Inno Setup Backend
+;       -> ArcRunner
+;       -> FreeArc
+;       -> RestoreData Rollback
+;
+; This file is intentionally written as a template.
+; It is not expected to compile until all placeholders are replaced.
+;
+; ---------------------------------------------------------
+; Main systems included
+; ---------------------------------------------------------
+;
+; - Hidden Inno Setup backend
+; - LegacyUI frontend bridge
+; - SetupLauncher directory parameter support
+; - Splash startup
+; - Game folder auto-detection
+; - Mandatory validation hooks
+; - Large Address Aware validation
 ; - FreeArc extraction through ArcRunner
-; - Manifest-based install tracking
-; - Backup restoration
-; - Clean uninstall rollback
+; - Optional 7-Zip external package support
+; - Optional MOVIES package workflow
+; - RestoreData rollback architecture
+; - Changed-file backup system
+; - install_manifest.txt tracking
+; - new_files_manifest.txt tracking
+; - Deterministic uninstall restoration
+; - Title-specific cleanup hooks
 ;
-; Replace all TODO / PLACEHOLDER values before using.
+; ---------------------------------------------------------
+; Required customization before use
+; ---------------------------------------------------------
+;
+; Replace every GAME_* / TODO_* / PLACEHOLDER value.
+;
+; Required per-title values:
+;
+; - MyAppName
+; - MyAppVersion
+; - MyOutputName
+; - GameId
+; - GameExe
+; - ArchiveName
+; - TempExtractFolder
+; - AppId
+; - ProjectRoot
+; - icon/image filenames
+; - GetDefaultDir paths
+; - IsGameInstallReady validation checks
+; - progress divisor in ExtractArchiveToTemp
+; - title-specific messages
+; - optional package configuration
+;
+; IMPORTANT:
+; Do not change rollback order unless rollback validation is repeated.
+;
+; =========================================================
 
-#define MyAppName "GAME_NAME Legacy Modpack"          ; Public installer name
-#define MyAppVersion "1.0.0"                          ; Installer/modpack version
-#define MyAppPublisher "Gxbbykko"                     ; Publisher shown by installer
-#define MyOutputName "GAME_NAME_MP"                   ; Compiled installer output name
 
-#define GameExe "GAME_EXE.exe"                        ; Main game executable to detect
-#define ArchiveName "GAME_ARCHIVE.arc"                ; FreeArc archive containing the modpack payload
-#define TempExtractFolder "GAME_NAME_Extract"         ; Temporary extraction folder inside Windows temp
+; =========================================================
+; Application metadata
+; =========================================================
+
+#define MyAppName "GAME_NAME Legacy Modpack"
+#define MyAppVersion "2.0.0"
+#define MyAppPublisher "Gxbbykko"
+#define MyOutputName "GAME_OUTPUT_NAME"
+
+; Internal game identifier used by LegacyUI.
+;
+; Examples:
+; nfsu
+; nfsu2
+; nfsmw
+; nfsc
+; nfsps
+; nfsuc
+
+#define GameId "game_id"
+
+; Main executable used for detection and validation.
+
+#define GameExe "GAME_EXE.exe"
+
+; Main FreeArc payload archive.
+
+#define ArchiveName "GAME_ARCHIVE.arc"
+
+; Temporary extraction folder under {tmp}.
+
+#define TempExtractFolder "GAME_Extract"
+
+
+; =========================================================
+; Optional external MOVIES / package configuration
+; =========================================================
+;
+; Set EnableMoviesPackage to 1 only for installers that must
+; download/extract/install an external package.
+;
+; Examples:
+;
+; Underground 2:
+;   Standard HD/updated MOVIES package.
+;
+; Most Wanted / Carbon:
+;   Standard HD/updated MOVIES package if used.
+;
+; Undercover:
+;   Optional Unpissed Movies / filter-off package should use
+;   title-specific LegacyUI option handling.
+;
+; For titles without external package support, keep this disabled.
+
+#define EnableMoviesPackage 0
+
+#if EnableMoviesPackage
+#define MoviesUrl "TODO_MOVIES_DOWNLOAD_URL"
+#define MoviesArchiveName "TODO_MOVIES_ARCHIVE.7z"
+#define MoviesExtractFolder "TODO_MOVIES_EXTRACT_FOLDER"
+#define MoviesSourceSubDir "TODO_SOURCE_ROOT\MOVIES"
+#define MoviesExpectedMinSize 900000000
+#endif
+
+
+; =========================================================
+; Local project structure
+; =========================================================
+;
+; These paths are local build paths used by the developer.
+; Public builds should be generated from the prepared local
+; InstallerProject folder.
+;
+; Expected local layout:
+;
+; ProjectRoot/
+; └── InstallerProject/
+;     ├── Images/
+;     ├── Tools/
+;     │   ├── arc.exe
+;     │   ├── ArcRunner.exe
+;     │   ├── Splash.exe
+;     │   ├── LegacyUI/
+;     │   └── optional 7z.exe / 7z.dll
+;     ├── GAME_ARCHIVE.arc
+;     └── GAME.iss
+
+#define ProjectRoot "C:\Users\Gabriel\Desktop\GAME_Modpack"
+#define InstallerProject AddBackslash(ProjectRoot) + "InstallerProject"
+#define ToolsDir AddBackslash(InstallerProject) + "Tools"
+#define ImagesDir AddBackslash(InstallerProject) + "Images"
+
+
+; =========================================================
+; Setup configuration
+; =========================================================
 
 [Setup]
-AppId={{GENERATE-NEW-GUID-HERE}                       ; Unique app ID. Generate a new GUID per game.
-AppName={#MyAppName}                                  ; Uses MyAppName define
-AppVersion={#MyAppVersion}                            ; Uses MyAppVersion define
-AppPublisher={#MyAppPublisher}                        ; Uses publisher define
-DefaultDirName={code:GetDefaultDir}                   ; Calls GetDefaultDir() to suggest game folder
 
-DisableProgramGroupPage=yes                           ; No Start Menu group page
-DisableReadyMemo=no                                   ; Show ready memo
-DisableReadyPage=no                                   ; Show ready/install confirmation page
+; Generate a unique GUID per title.
+; Do not reuse AppIds between games.
 
-OutputDir=.                                           ; Output compiled installer beside script
-OutputBaseFilename={#MyOutputName}                    ; Installer filename without extension
+AppId={{TODO-GENERATE-NEW-GUID-HERE}
 
-Compression=none                                      ; Archive is already compressed by FreeArc
-SolidCompression=no                                   ; Not needed because Inno is only wrapping files
-WizardStyle=modern                                    ; Modern Inno wizard UI
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
 
-WizardImageFile=PATH_TO_WIZARD_IMAGE                  ; Left-side wizard bitmap
-WizardSmallImageFile=PATH_TO_HEADER_IMAGE             ; Header bitmap
-SetupIconFile=PATH_TO_ICON                            ; Installer icon
+; The backend receives the target directory either from SetupLauncher
+; through /DIR or from GetDefaultDir fallback.
 
-Uninstallable=yes                                     ; Enables generated uninstaller
-CreateUninstallRegKey=no                              ; Avoids Windows Programs & Features registry entry
-UninstallFilesDir={app}\_LegacyInstaller              ; Stores uninstaller inside game folder
-UninstallDisplayName={#MyAppName} Restore Tool        ; Name shown by uninstaller
+DefaultDirName={code:GetDefaultDir}
+UsePreviousAppDir=no
+
+OutputDir={#ProjectRoot}
+OutputBaseFilename={#MyOutputName}
+
+; FreeArc handles compression.
+; Inno only wraps the backend payload.
+
+Compression=none
+SolidCompression=no
+
+WizardStyle=modern
+
+; The visible UI is LegacyUI.
+; The Inno wizard is hidden and acts as backend.
+
+DisableWelcomePage=yes
+DisableDirPage=yes
+DisableReadyPage=yes
+DisableReadyMemo=no
+DisableFinishedPage=yes
+DisableProgramGroupPage=yes
+AlwaysShowComponentsList=no
+
+WizardImageFile={#ImagesDir}\wizard.bmp
+WizardSmallImageFile={#ImagesDir}\header.bmp
+SetupIconFile={#ImagesDir}\GAME_icon.ico
+
+; Uninstaller is stored locally in the game folder.
+
+Uninstallable=yes
+CreateUninstallRegKey=yes
+UninstallFilesDir={app}\_LegacyInstaller
+UninstallDisplayName={#MyAppName} Restore Tool
+
+
+; =========================================================
+; Runtime files
+; =========================================================
 
 [Files]
-Source: "Tools\arc.exe"; Flags: dontcopy              ; FreeArc extractor, copied to temp at runtime
-Source: "{#ArchiveName}"; Flags: dontcopy             ; Modpack archive, copied to temp at runtime
-Source: "Tools\Splash.exe"; Flags: dontcopy           ; Splash screen executable
-Source: "Images\splash.png"; Flags: dontcopy          ; Splash image
-Source: "Tools\ArcRunner.exe"; Flags: dontcopy        ; Wrapper that launches arc.exe and writes extraction log
+
+; Core extraction tools.
+
+Source: "{#ToolsDir}\arc.exe"; Flags: dontcopy
+Source: "{#ToolsDir}\ArcRunner.exe"; Flags: dontcopy
+
+; Optional 7-Zip files for external packages.
+
+#if EnableMoviesPackage
+Source: "{#ToolsDir}\7z.exe"; Flags: dontcopy
+Source: "{#ToolsDir}\7z.dll"; Flags: dontcopy
+#endif
+
+; Splash.
+
+Source: "{#ToolsDir}\Splash.exe"; Flags: dontcopy
+Source: "{#ImagesDir}\splash.png"; Flags: dontcopy
+
+; Main modpack archive.
+
+Source: "{#InstallerProject}\{#ArchiveName}"; Flags: dontcopy
+
+; LegacyUI runtime.
+;
+; First entry is extracted to {tmp} for install mode.
+; Second entry is installed into _LegacyInstaller for uninstall mode.
+
+Source: "{#ToolsDir}\LegacyUI\*"; DestDir: "{tmp}\LegacyUI"; Flags: dontcopy recursesubdirs createallsubdirs noencryption
+Source: "{#ToolsDir}\LegacyUI\*"; DestDir: "{app}\_LegacyInstaller\LegacyUI"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+
+; =========================================================
+; Restore Tool shortcut
+; =========================================================
+
+[Icons]
+
+Name: "{app}\_LegacyInstaller\Restore GAME_NAME Legacy Modpack"; \
+Filename: "{app}\_LegacyInstaller\LegacyUI\LegacyUI.exe"; \
+Parameters: "--target ""{app}"" --mode uninstall --game {#GameId}"; \
+WorkingDir: "{app}\_LegacyInstaller\LegacyUI"; \
+IconFilename: "{app}\_LegacyInstaller\LegacyUI\LegacyUI.exe"
+
+
+; =========================================================
+; Pascal Script
+; =========================================================
 
 [Code]
 
 var
-  UserAcceptedUnsafeInstall: Boolean;                 ; Tracks if user accepted unsafe install warning
-  ExtractLogMemo: TNewMemo;                           ; Runtime log box shown during extraction
+  ExtractLogMemo: TNewMemo;
+
+  LegacyUIResultCode: Integer;
+  LegacyUIStatePath: String;
+  LegacyUICommandPath: String;
+  LegacyUITargetPath: String;
+
+  InstallAbortRequested: Boolean;
+
 
 ; =========================================================
 ; Default game path detection
 ; =========================================================
+;
+; Replace these paths per title.
+;
+; This function only provides a suggested fallback path.
+; SetupLauncher may pass the real selected folder through /DIR.
 
 function GetDefaultDir(Param: String): String;
 begin
-  ; First check the preferred/manual install path.
   if FileExists('C:\Games\GAME_FOLDER\{#GameExe}') then
     Result := 'C:\Games\GAME_FOLDER'
 
-  ; Add more else-if blocks here for retail/EA Games/Electronic Arts paths.
-  ; Example:
-  ; else if FileExists(ExpandConstant('{pf32}\EA GAMES\GAME_FOLDER\{#GameExe}')) then
-  ;   Result := ExpandConstant('{pf32}\EA GAMES\GAME_FOLDER')
+  else if FileExists(ExpandConstant('{pf}\EA GAMES\GAME_FOLDER\{#GameExe}')) then
+    Result := ExpandConstant('{pf}\EA GAMES\GAME_FOLDER')
 
-  ; Fallback folder shown when the game is not auto-detected.
+  else if FileExists(ExpandConstant('{pf32}\EA GAMES\GAME_FOLDER\{#GameExe}')) then
+    Result := ExpandConstant('{pf32}\EA GAMES\GAME_FOLDER')
+
   else
     Result := 'C:\Games\GAME_FOLDER';
 end;
 
+
 ; =========================================================
-; Basic file validation helpers
+; SetupLauncher /DIR bridge
 ; =========================================================
 
-function FileSizeMatches(FileName: String; ExpectedSize: Integer): Boolean;
-var
-  Size: Integer;
+function GetLauncherDirParam(): String;
 begin
-  Result := False;                                    ; Default to failed validation
+  Result := ExpandConstant('{param:DIR|}');
 
-  if not FileExists(FileName) then                    ; Missing file = invalid
+  if Result <> '' then
+  begin
+    StringChangeEx(Result, '"', '', True);
+    Result := RemoveBackslashUnlessRoot(Result);
+  end;
+end;
+
+
+; =========================================================
+; Active target folder
+; =========================================================
+
+function GetActiveInstallDir(): String;
+begin
+  if LegacyUITargetPath <> '' then
+  begin
+    Result := LegacyUITargetPath;
     Exit;
+  end;
 
-  if FileSize(FileName, Size) then                    ; Read file size
-    Result := Size = ExpectedSize;                    ; Pass only if exact size matches
+  try
+    Result := WizardDirValue();
+  except
+    Result := GetDefaultDir('');
+  end;
 end;
 
-function RequiredFolderExists(BaseDir, FolderName: String): Boolean;
-begin
-  Result := DirExists(AddBackslash(BaseDir) + FolderName); ; Checks required game folder
-end;
-
-function IsLargeAddressAware(ExePath: String): Boolean;
-var
-  ResultCode: Integer;
-  PSCommand: String;
-begin
-  Result := False;                                    ; Default to not patched
-
-  ; PowerShell reads the PE header and checks the Large Address Aware flag.
-  PSCommand :=
-    '-NoProfile -ExecutionPolicy Bypass -Command "' +
-    '$bytes=[System.IO.File]::ReadAllBytes(''' + ExePath + ''');' +
-    '$pe=[BitConverter]::ToInt32($bytes,0x3C);' +
-    '$off=$pe+4+18;' +
-    '$ch=[BitConverter]::ToUInt16($bytes,$off);' +
-    'if(($ch -band 0x20) -ne 0){exit 0}else{exit 1}"';
-
-  if Exec(
-      ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-      PSCommand,
-      '',
-      SW_HIDE,
-      ewWaitUntilTerminated,
-      ResultCode
-  ) then
-    Result := (ResultCode = 0);                       ; Exit code 0 means LAA is enabled
-end;
-
-; =========================================================
-; Game validation
-; =========================================================
-
-function IsGameInstallReady(BaseDir: String): Boolean;
-var
-  ExePath: String;
-begin
-  Result := False;                                    ; Default to invalid
-
-  ExePath := AddBackslash(BaseDir) + '{#GameExe}';    ; Full executable path
-
-  if not FileExists(ExePath) then Exit;               ; Game executable must exist
-
-  ; TODO: Replace with the expected executable size.
-  ; if not FileSizeMatches(ExePath, 1234567) then Exit;
-
-  if not IsLargeAddressAware(ExePath) then Exit;      ; Require 4GB/LAA patch
-
-  ; TODO: Add important file-size checks for this game.
-  ; if not FileSizeMatches(AddBackslash(BaseDir) + 'GLOBAL\GlobalB.lzc', 1234567) then Exit;
-
-  ; TODO: Add or remove required folders depending on the game.
-  if not RequiredFolderExists(BaseDir, 'CARS') then Exit;
-  if not RequiredFolderExists(BaseDir, 'FRONTEND') then Exit;
-  if not RequiredFolderExists(BaseDir, 'GLOBAL') then Exit;
-
-  Result := True;                                     ; All checks passed
-end;
 
 ; =========================================================
 ; Error reporting
 ; =========================================================
+;
+; Error reports are written beside the backend installer,
+; not inside the game folder.
 
 function GetInstallerErrorFolder(): String;
 begin
-  ; Error logs are written beside the installer executable, not inside the game folder.
-  Result := AddBackslash(ExpandConstant('{src}')) + '_GAME_Error_Backup';
+  Result := AddBackslash(ExpandConstant('{src}')) + '_GAME_Legacy_Error_Backup';
 end;
 
 procedure CreateErrorReport(ErrorText: String);
@@ -179,8 +363,8 @@ var
   ErrorDir: String;
   LogFile: String;
 begin
-  ErrorDir := GetInstallerErrorFolder();              ; Error folder path
-  ForceDirectories(ErrorDir);                         ; Create folder if missing
+  ErrorDir := GetInstallerErrorFolder();
+  ForceDirectories(ErrorDir);
 
   LogFile := AddBackslash(ErrorDir) + 'install_error.txt';
 
@@ -188,292 +372,150 @@ begin
     LogFile,
     MyAppName + ' installation error'#13#10 +
     'Timestamp: ' + GetDateTimeString('yyyy-mm-dd hh:nn:ss', '-', ':') + #13#10 +
-    'Selected game folder: ' + WizardDirValue() + #13#10 +
+    'Selected game folder: ' + GetActiveInstallDir() + #13#10 +
     'Error: ' + ErrorText + #13#10,
     False
   );
 end;
+```
 
 ; =========================================================
-; Extraction log UI
+; File validation helpers
 ; =========================================================
 
-procedure CreateExtractLogBox;
-begin
-  ; Adds a read-only log box under the progress bar during extraction.
-  ExtractLogMemo := TNewMemo.Create(WizardForm);
-  ExtractLogMemo.Parent := WizardForm.InstallingPage;
-  ExtractLogMemo.Left := WizardForm.ProgressGauge.Left;
-  ExtractLogMemo.Top := WizardForm.ProgressGauge.Top + WizardForm.ProgressGauge.Height + 12;
-  ExtractLogMemo.Width := WizardForm.ProgressGauge.Width;
-  ExtractLogMemo.Height := 170;
-  ExtractLogMemo.ScrollBars := ssVertical;
-  ExtractLogMemo.ReadOnly := True;
-  ExtractLogMemo.Visible := True;
-end;
-
-function CleanLogText(S: String): String;
+function FileSizeMatches(FileName: String; ExpectedSize: Int64): Boolean;
 var
-  I: Integer;
+  Size: Int64;
 begin
-  Result := '';
+  Result := False;
 
-  ; Removes backspace characters from FreeArc console-style output.
-  for I := 1 to Length(S) do
-  begin
-    if S[I] <> #8 then
-      Result := Result + S[I];
-  end;
+  if not FileExists(FileName) then
+    Exit;
+
+  if GetFileSize(FileName, Size) then
+    Result := (Size = ExpectedSize);
 end;
 
-; =========================================================
-; Directory size helper
-; =========================================================
 
-function GetDirectorySize(Dir: String): Int64;
-var
-  FindRec: TFindRec;
-  FilePath: String;
-  Size: Integer;
+function RequiredFolderExists(BaseDir, FolderName: String): Boolean;
 begin
-  Result := 0;
-  Dir := RemoveBackslashUnlessRoot(Dir);
-
-  ; Recursively calculates extracted file size for progress estimation.
-  if FindFirst(Dir + '\*', FindRec) then
-  begin
-    try
-      repeat
-        if (FindRec.Name <> '.') and (FindRec.Name <> '..') then
-        begin
-          FilePath := Dir + '\' + FindRec.Name;
-
-          if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
-            Result := Result + GetDirectorySize(FilePath)
-          else
-          begin
-            if FileSize(FilePath, Size) then
-              Result := Result + Size;
-          end;
-        end;
-      until not FindNext(FindRec);
-    finally
-      FindClose(FindRec);
-    end;
-  end;
+  Result := DirExists(AddBackslash(BaseDir) + FolderName);
 end;
 
-; =========================================================
-; Writable-file helper
-; =========================================================
 
-procedure MakeWritable(FileName: String);
+; =========================================================
+; Large Address Aware verification
+; =========================================================
+;
+; Release 2.0 requires the game executable to already have
+; the 4GB Patch applied where applicable.
+;
+; Replace or extend this implementation if a future title
+; requires a different validation mechanism.
+
+function IsLargeAddressAware(ExePath: String): Boolean;
 var
   ResultCode: Integer;
+  OutputFile: String;
+  Command: String;
 begin
-  ; Removes read-only/system/hidden attributes before overwrite/delete.
-  if FileExists(FileName) then
-  begin
-    Exec(
-      ExpandConstant('{cmd}'),
-      '/C attrib -R -S -H "' + FileName + '"',
-      '',
-      SW_HIDE,
-      ewWaitUntilTerminated,
-      ResultCode
-    );
-  end;
-end;
+  OutputFile := ExpandConstant('{tmp}\laa_check.txt');
 
-; =========================================================
-; Archive extraction
-; =========================================================
+  DeleteFile(OutputFile);
 
-function ExtractArchiveToTemp(): Boolean;
-begin
-  ; TODO:
-  ; Paste the validated extraction logic from a working title.
-  ;
-  ; Required behavior:
-  ; - Extract arc.exe, ArcRunner.exe, and archive into {tmp}
-  ; - Delete old extraction folder if present
-  ; - Launch ArcRunner.exe
-  ; - Read arc_progress.log
-  ; - Update wizard progress
-  ; - Return True only when extraction succeeds
-end;
+  Command :=
+    '-NoProfile -ExecutionPolicy Bypass -Command ' +
+    '"$fs=[IO.File]::OpenRead(''' + ExePath + ''');' +
+    '$fs.Seek(0x3C,''Begin'')>$null;' +
+    '$br=New-Object IO.BinaryReader($fs);' +
+    '$pe=$br.ReadInt32();' +
+    '$fs.Seek($pe+0x16,''Begin'')>$null;' +
+    '$chars=$br.ReadUInt16();' +
+    '$fs.Close();' +
+    'if(($chars -band 0x20)-ne 0){''1''}else{''0''} | Out-File ''' +
+    OutputFile + ''' -Encoding ascii"';
 
-; =========================================================
-; Manifest generation
-; =========================================================
-
-function ShouldSkipManifest(RelPath: String): Boolean;
-begin
-  ; Prevents uninstall system from tracking its own support folders.
-  Result :=
-    (Pos('Backup\', RelPath) = 1) or
-    (Pos('_LegacyInstaller\', RelPath) = 1);
-end;
-
-function CopyDirectoryRecursive(SourceDir, DestDir, BaseSourceDir, ManifestPath: String): Boolean;
-begin
-  ; TODO:
-  ; Paste validated recursive copy logic here.
-  ;
-  ; Required behavior:
-  ; - Recursively copy extracted files into game folder
-  ; - Make destination files writable before deleting
-  ; - Delete existing destination files before copy
-  ; - Write copied relative paths to install_manifest.txt
-  ; - Skip Backup and _LegacyInstaller paths
-end;
-
-function CopyExtractedFilesToGame(): Boolean;
-begin
-  ; TODO:
-  ; Paste validated CopyExtractedFilesToGame logic here.
-  ;
-  ; Required behavior:
-  ; - Set TempExtractPath
-  ; - Create {app}\_LegacyInstaller
-  ; - Create/clear install_manifest.txt
-  ; - Call CopyDirectoryRecursive()
-end;
-
-; =========================================================
-; Backup restoration and uninstall cleanup
-; =========================================================
-
-procedure RestoreBackupFiles(SourceDir, DestDir: String);
-begin
-  ; TODO:
-  ; Paste validated backup restore logic here.
-  ;
-  ; Required behavior:
-  ; - Recursively copy files from Backup into game folder
-  ; - Make existing destination files writable
-  ; - Delete destination before restoring original
-end;
-
-procedure DeleteFilesFromManifest(GameDir, ManifestPath: String);
-begin
-  ; TODO:
-  ; Paste validated manifest deletion logic here.
-  ;
-  ; Required behavior:
-  ; - Read install_manifest.txt
-  ; - Delete every listed installed file
-  ; - Make files writable before delete
-end;
-
-procedure RemoveEmptyDirectories(Dir: String);
-begin
-  ; TODO:
-  ; Paste validated empty-folder cleanup logic here.
-  ;
-  ; Required behavior:
-  ; - Recursively remove empty directories
-  ; - Do not remove Backup
-  ; - Do not remove _LegacyInstaller
-end;
-
-; =========================================================
-; Uninstall flow
-; =========================================================
-
-procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-begin
-  ; TODO:
-  ; Paste validated uninstall logic here.
-  ;
-  ; Required order:
-  ; 1. DeleteFilesFromManifest(GameDir, ManifestPath)
-  ; 2. RestoreBackupFiles(BackupDir, GameDir)
-  ; 3. Optional special cleanup files
-  ; 4. RemoveEmptyDirectories(GameDir)
-  ;
-  ; Important:
-  ; Do not change this order unless rollback validation is repeated.
-end;
-
-; =========================================================
-; Splash screen
-; =========================================================
-
-procedure RunSplash;
-var
-  ResultCode: Integer;
-begin
-  ; Extract splash executable and image to temp.
-  ExtractTemporaryFile('Splash.exe');
-  ExtractTemporaryFile('splash.png');
-
-  ; Show splash before wizard initialization continues.
   Exec(
-    ExpandConstant('{tmp}\Splash.exe'),
-    '"' + ExpandConstant('{tmp}\splash.png') + '"',
+    ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    Command,
     '',
-    SW_SHOW,
+    SW_HIDE,
     ewWaitUntilTerminated,
     ResultCode
   );
+
+  Result :=
+    FileExists(OutputFile) and
+    (Trim(LoadStringFromFile(OutputFile)) = '1');
+
+  DeleteFile(OutputFile);
 end;
 
-procedure InitializeWizard;
+
+; =========================================================
+; Game validation
+; =========================================================
+;
+; IMPORTANT
+;
+; Replace all placeholder values below for each title.
+;
+; Validation should verify:
+;
+; • Correct executable
+; • Correct executable size
+; • Latest official patch
+; • LAA applied
+; • Required folders
+; • Critical files
+;
+; The NFSU implementation is considered the reference
+; architecture for future titles.
+
+function IsGameInstallReady(BaseDir: String): Boolean;
 begin
-  UserAcceptedUnsafeInstall := False;                 ; Reset unsafe install flag
-  RunSplash;                                          ; Show splash screen
+  Result :=
+
+    FileExists(AddBackslash(BaseDir) + '{#GameExe}')
+
+    and FileSizeMatches(
+      AddBackslash(BaseDir) + '{#GameExe}',
+      TODO_EXE_SIZE)
+
+    and IsLargeAddressAware(
+      AddBackslash(BaseDir) + '{#GameExe}')
+
+    and RequiredFolderExists(BaseDir, 'CARS')
+    and RequiredFolderExists(BaseDir, 'GLOBAL')
+    and RequiredFolderExists(BaseDir, 'FRONTEND')
+    and RequiredFolderExists(BaseDir, 'LANGUAGES')
+
+    and FileSizeMatches(
+      AddBackslash(BaseDir) + 'GLOBAL\GlobalB.lzc',
+      TODO_GLOBAL_SIZE)
+
+    and FileSizeMatches(
+      AddBackslash(BaseDir) + 'LANGUAGES\English.bin',
+      TODO_LANGUAGE_SIZE);
 end;
 
+
 ; =========================================================
-; User validation warning
+; Unsafe install confirmation
 ; =========================================================
 
-function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  UserAcceptedUnsafeInstall: Boolean;
+
+function ConfirmUnsafeInstall(): Boolean;
 begin
-  Result := True;
+  Result :=
+    MsgBox(
+      'The selected directory does not appear to be a fully supported installation.' + #13#10#13#10 +
+      'Continuing may result in installation failures or rollback problems.' + #13#10#13#10 +
+      'Do you want to continue anyway?',
+      mbCriticalError,
+      MB_YESNO) = IDYES;
 
-  ; TODO:
-  ; Paste validated warning prompt here.
-  ;
-  ; Required behavior:
-  ; - On wpSelectDir, run IsGameInstallReady(WizardDirValue())
-  ; - If validation fails, warn user
-  ; - YES continues anyway
-  ; - NO returns to folder selection
+  UserAcceptedUnsafeInstall := Result;
 end;
-
-; =========================================================
-; Install flow
-; =========================================================
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if CurStep = ssInstall then
-  begin
-    ; Extract archive first. Game folder remains untouched if this fails.
-    if not ExtractArchiveToTemp() then
-    begin
-      MsgBox(
-        'Archive extraction failed.'#13#10#13#10 +
-        'The game folder was not modified.',
-        mbError,
-        MB_OK
-      );
-      RaiseException('Extraction failed.');
-    end;
-
-    ; Copy extracted files into game folder and generate manifest.
-    if not CopyExtractedFilesToGame() then
-    begin
-      MsgBox(
-        'File copy failed.'#13#10#13#10 +
-        'Some files may not have been installed.',
-        mbError,
-        MB_OK
-      );
-      RaiseException('Copy failed.');
-    end;
-  end;
-end;
-```

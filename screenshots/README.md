@@ -1,8 +1,19 @@
 # Screenshots
 
-This folder stores screenshots used for project documentation, release validation, and repository presentation.
+This folder stores screenshots used throughout the **NFS Legacy Modpacks** repository for documentation, validation, release galleries, and project presentation.
 
-Screenshots help demonstrate installer behavior, rollback validation, and expected workflows for contributors and users.
+The screenshots document the complete Release 2.0 installer architecture, mandatory requirements, rollback validation, and visual before/after comparisons for all supported titles.
+
+---
+
+# Purpose
+
+The screenshot collection serves four primary purposes:
+
+* Document the installer workflow
+* Demonstrate rollback validation
+* Showcase the visual improvements of each Legacy Modpack
+* Provide reproducible proof of the validated Release 2.0 architecture
 
 ---
 
@@ -10,19 +21,16 @@ Screenshots help demonstrate installer behavior, rollback validation, and expect
 
 ```txt
 screenshots/
-├── installers/
-│   ├── underground-installer.png
-│   ├── underground2-installer.png
-│   ├── mw-installer.png
-│   ├── carbon-installer.png
-│   ├── prostreet-installer.png
-│   └── undercover-installer.png
-│
+├── installer/
 ├── rollback/
-│   ├── rollback-success.png
-│   ├── manifest-example.png
-│   └── uninstall-success.png
-│
+├── mandatory/
+├── games/
+│   ├── nfsu/
+│   ├── nfsu2/
+│   ├── nfsmw/
+│   ├── nfsc/
+│   ├── nfsps/
+│   └── nfsuc/
 └── README.md
 ```
 
@@ -30,202 +38,131 @@ screenshots/
 
 # Installer Screenshots
 
-The `installers/` folder should contain screenshots of the installer workflow for every supported title.
+The `installer/` folder documents the standardized installer workflow.
 
-Recommended captures:
+Recommended captures include:
 
-## Welcome / splash
+* Validation warning
+* Welcome screen
+* Game directory selection
+* Validation successful
+* Installation progress
+* Installation completed
 
-Capture the installer startup screen or splash screen.
+These screenshots demonstrate the Release 2.0 installation workflow shared by all supported titles.
 
-Purpose:
+---
 
-* Shows branding consistency
-* Documents installer presentation
+# Rollback Screenshots
 
-Example:
+The `rollback/` folder documents the deterministic rollback architecture.
+
+Recommended captures include:
+
+* Restore Tool
+* `_LegacyInstaller`
+* `RestoreData`
+* `install_manifest.txt`
+* `new_files_manifest.txt`
+* Compare-Object verification
+
+Successful rollback verification should produce:
 
 ```txt
-underground-installer.png
-```
+Compare-Object
 
----
-
-## Game detection / path selection
-
-Capture the installer detecting or selecting the game folder.
-
-Purpose:
-
-* Documents supported installation paths
-* Demonstrates automatic game detection
-
----
-
-## Extraction progress
-
-Capture archive extraction in progress.
-
-Purpose:
-
-* Shows progress bar behavior
-* Documents extraction logging
-* Demonstrates FreeArc integration
-
-Recommended capture:
-
-* Progress gauge visible
-* Extraction log visible
-* Status text readable
-
----
-
-## Installation complete
-
-Capture successful installation screen.
-
-Purpose:
-
-* Documents expected successful completion state
-
----
-
-# Rollback Validation Screenshots
-
-The `rollback/` folder should contain screenshots proving rollback validation behavior.
-
-These are especially useful for repository credibility and future debugging.
-
----
-
-## `_LegacyInstaller` structure
-
-Capture:
-
-```txt
-_LegacyInstaller/
-├── install_manifest.txt
-├── unins000.exe
-└── unins000.dat
-```
-
-Purpose:
-
-* Demonstrates uninstall infrastructure
-* Shows manifest generation
-
-Recommended filename:
-
-```txt
-legacyinstaller-folder.png
-```
-
----
-
-## Manifest preview
-
-Capture:
-
-```powershell
-Get-Content ".\_LegacyInstaller\install_manifest.txt" | Select-Object -First 20
-```
-
-Purpose:
-
-* Demonstrates tracked file removal system
-* Documents manifest format
-
-Recommended filename:
-
-```txt
-manifest-example.png
-```
-
----
-
-## Successful rollback validation
-
-Capture:
-
-```powershell
-Compare-Object `
--ReferenceObject $baseline `
--DifferenceObject $after `
--Property Path, Hash
-```
-
-Expected result:
-
-```txt
 (no output)
 ```
 
-Purpose:
-
-* Proves rollback works correctly
-* Demonstrates clean uninstall validation
-
-Recommended filename:
-
-```txt
-rollback-success.png
-```
+indicating that the restored installation matches the original patched game.
 
 ---
 
-## Successful uninstall
+# Mandatory Requirements
 
-Capture uninstall completion dialog.
+The `mandatory/` folder documents the requirements validated by the installer before installation.
 
-Purpose:
+Each supported title includes proof of:
 
-* Documents expected uninstall result
-* Demonstrates backup restoration workflow
+* Required game version
+* Executable information
+* File size
+* Large Address Aware (4GB Patch)
+* Successful validation
 
-Recommended filename:
+These screenshots demonstrate the exact requirements enforced by the installer.
 
-```txt
-uninstall-success.png
-```
+---
+
+# Game Galleries
+
+Each supported title includes a dedicated gallery documenting:
+
+* Vanilla main menu
+* Legacy Modpack main menu
+* Vanilla gameplay
+* Legacy Modpack gameplay
+
+Additional title-specific screenshots are included where applicable, such as optional installation components.
+
+---
+
+# Release Galleries
+
+Every release folder contains its own `Gallery` directory documenting the complete workflow for that title.
+
+Typical gallery contents include:
+
+* Mandatory Requirements proof
+* Installer startup
+* Validation workflow
+* Installation progress
+* Installation completion
+* Rollback workflow
+* Before / After comparison
+* Gameplay comparison
+
+These galleries provide complete visual documentation for each public release.
 
 ---
 
 # Screenshot Guidelines
 
-Screenshots should:
+All screenshots should:
 
-* Be readable
-* Use consistent resolution where possible
-* Show complete windows when relevant
-* Avoid cropped or unclear captures
-
-Recommended:
-
-* PNG format
-* Dark mode terminal where possible
-* Consistent naming
+* Be clear and readable
+* Capture complete application windows where practical
+* Use PNG format
+* Maintain consistent naming
+* Avoid unnecessary cropping
+* Accurately represent the current Release 2.0 architecture
 
 ---
 
 # Privacy Guidelines
 
-Avoid including:
+Before publishing, ensure screenshots do not expose:
 
-* Personal email addresses
-* Private folders if avoidable
-* Sensitive system information
-* Browser tabs unrelated to the project
+* Personal information
+* Email addresses
+* Sensitive system details
+* Unrelated browser tabs
+* Private file paths where avoidable
 
-If necessary, crop screenshots before publishing.
+Crop or edit screenshots where necessary.
 
 ---
 
-# Purpose
+# Repository Philosophy
 
-The goal of screenshots is to make the repository:
+Screenshots are treated as engineering documentation rather than promotional material.
 
-* Easier to understand
-* Easier to validate
-* More professional
-* More contributor-friendly
-* More transparent about rollback safety
+Their purpose is to provide transparent visual evidence of:
+
+* Installer behavior
+* Validation workflow
+* Rollback integrity
+* Mandatory requirements
+* Gameplay transformation
+
+This allows users and contributors to understand the project architecture and verify expected behavior before using a release.

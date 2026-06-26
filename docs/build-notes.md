@@ -28,8 +28,8 @@ Every build must be capable of restoring the original patched game installation.
 
 The Release 2.0 architecture supports every classic PC Need for Speed title.
 
-| Game                         | Status     |
-| ---------------------------- | ---------- |
+| Game                         |   Status   |
+| ---------------------------- | :--------: |
 | Need for Speed Underground   | ✅ Complete |
 | Need for Speed Underground 2 | ✅ Complete |
 | Need for Speed Most Wanted   | ✅ Complete |
@@ -37,7 +37,7 @@ The Release 2.0 architecture supports every classic PC Need for Speed title.
 | Need for Speed ProStreet     | ✅ Complete |
 | Need for Speed Undercover    | ✅ Complete |
 
-Every title shares the same installer architecture, rollback engine, and validation methodology.
+Every title shares the same installer architecture, rollback engine, deployment workflow, and validation methodology.
 
 ---
 
@@ -92,7 +92,7 @@ Purpose:
 
 Supported archive format:
 
-```text id="n20x5u"
+```text
 *.arc
 ```
 
@@ -121,9 +121,9 @@ Purpose:
 
 # Build Pipeline
 
-Every supported title follows the same build workflow.
+Every supported title follows the same standardized workflow.
 
-```text id="xg9mzf"
+```text
 SetupLauncher
         │
         ▼
@@ -148,7 +148,7 @@ Installer
 
 Each installer project follows the same layout.
 
-```text id="5azdc0"
+```text
 InstallerProject/
 │
 ├── Images/
@@ -183,6 +183,7 @@ Every installer performs the following sequence.
 * Installer interface displayed.
 * Game selected.
 * Installation configured.
+* Optional components selected (where applicable).
 
 ---
 
@@ -193,7 +194,7 @@ The backend verifies:
 * Game executable
 * Expected executable size
 * Latest official patch
-* Large Address Aware support
+* Large Address Aware (4GB Patch)
 * Required folders
 * Critical file sizes
 
@@ -221,7 +222,7 @@ The installer preserves directory structure and records installation metadata.
 
 The installer generates:
 
-```text id="3xg1lw"
+```text
 _LegacyInstaller
 │
 ├── install_manifest.txt
@@ -236,9 +237,9 @@ Only overwritten original files are backed up.
 
 ## 7. Uninstall Workflow
 
-Rollback follows the Release 2.0 sequence.
+Rollback follows the standardized Release 2.0 sequence.
 
-```text id="i8g6qx"
+```text
 Delete new files
         │
         ▼
@@ -260,14 +261,17 @@ Verification
 
 Every release must complete the following validation.
 
-```text id="1dvs8o"
+```text
 Clean Patched Game
+        │
+        ▼
+Mandatory Requirements Verified
         │
         ▼
 Install
         │
         ▼
-Verify Gameplay
+Gameplay Verification
         │
         ▼
 Rollback
@@ -278,7 +282,7 @@ Compare-Object
 
 Expected result:
 
-```text id="pn9k9b"
+```text
 (no output)
 ```
 
@@ -291,13 +295,30 @@ This confirms:
 
 ---
 
+# Documentation Workflow
+
+Every Release 2.0 build also includes repository documentation.
+
+Documentation consists of:
+
+* Release README
+* Gallery screenshots
+* Mandatory Requirements proof
+* Gameplay comparison
+* Rollback validation proof
+* Updated engineering documentation
+
+These assets are maintained together with the installer source.
+
+---
+
 # Repository Rules
 
 The repository intentionally excludes build artifacts and copyrighted content.
 
 ## Never Commit
 
-```text id="x6lybx"
+```text
 *.arc
 *.exe
 *.dll
@@ -310,7 +331,7 @@ The repository intentionally excludes build artifacts and copyrighted content.
 
 ## Temporary Files
 
-```text id="my2fdw"
+```text
 RestoreData/
 _LegacyInstaller/
 *_Extract/
@@ -322,7 +343,7 @@ install_error.txt
 
 ## Validation Files
 
-```text id="1e30c6"
+```text
 baseline_vanilla.csv
 after_install.csv
 after_uninstall.csv
@@ -352,6 +373,7 @@ A build is considered release-ready only when all of the following have passed.
 * Successful rollback
 * RestoreData validation
 * Compare-Object returns no differences
+* Gallery documentation completed
 * Documentation synchronized
 * Repository synchronized
 
@@ -365,5 +387,5 @@ Planned future work includes:
 * Automated release packaging
 * Automated validation tooling
 * Expanded documentation
-* Additional installer screenshots
+* Additional gallery documentation
 * Future quality-of-life improvements

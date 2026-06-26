@@ -63,6 +63,7 @@ The Release 2.0 installer framework combines SetupLauncher, LegacyUI, a validate
 ## Validation
 
 - Installation verified
+- Gameplay verified
 - Rollback verified
 - Compare-Object verification passed
 - RestoreData validated
@@ -71,7 +72,7 @@ The Release 2.0 installer framework combines SetupLauncher, LegacyUI, a validate
 
 # Installer Architecture
 
-This release uses the Release 2.0 installer architecture.
+This release uses the standardized Release 2.0 installer architecture.
 
 ```text
 SetupLauncher
@@ -102,11 +103,13 @@ Required game version:
 |------|------------------|
 | <Game Name> | <Required Version> |
 
-Requirements:
+Mandatory requirements:
 
 - Latest official game patch
 - Clean game installation
-- Large Address Aware (4GB Patch) where applicable
+- Large Address Aware (4GB Patch)
+
+The installer validates these requirements before installation.
 
 ---
 
@@ -131,6 +134,8 @@ docs/rollback-validation.md
 
 Release validation completed successfully.
 
+✔ Mandatory requirements verified
+
 ✔ Installation
 
 ✔ Gameplay verification
@@ -140,6 +145,21 @@ Release validation completed successfully.
 ✔ Compare-Object verification
 
 ✔ Restored installation matches clean patched reference
+
+---
+
+# Gallery
+
+This release includes visual documentation covering:
+
+- Mandatory Requirements
+- Installer workflow
+- Installation validation
+- Rollback validation
+- Before / After comparison
+- Gameplay comparison
+
+See the Gallery folder included with this release for complete documentation.
 
 ---
 
@@ -164,11 +184,12 @@ Get-FileHash ".\<InstallerName>.exe" -Algorithm SHA256
 # Installation Notes
 
 1. Update the game to the latest official version.
-2. Launch the installer.
-3. Select the game installation directory.
-4. Follow any validation messages.
-5. Wait for extraction and installation to complete.
-6. Launch the game.
+2. Apply the Large Address Aware (4GB Patch).
+3. Launch the installer.
+4. Select the game installation directory.
+5. Follow any validation messages.
+6. Wait for extraction and installation to complete.
+7. Launch the game.
 
 To remove the modpack, use the included Restore Tool.
 
@@ -207,6 +228,8 @@ Before publishing:
 * [ ] Gameplay tested
 * [ ] Rollback validated
 * [ ] Compare-Object returned no differences
+* [ ] Mandatory requirement proof captured
+* [ ] Gallery screenshots prepared
 * [ ] SHA-256 generated
 * [ ] README updated
 * [ ] CHANGELOG updated
@@ -243,6 +266,7 @@ Release assets:
 NFSU-Legacy-Modpack-v2.0.0.exe
 SHA256.txt
 CHANGELOG.md
+Gallery/
 ```
 
 ---
@@ -253,11 +277,13 @@ Every GitHub Release should represent a fully validated installer.
 
 A release is considered complete only when:
 
-1. Installation succeeds.
-2. Gameplay verification succeeds.
-3. Rollback succeeds.
-4. RestoreData restores the original patched installation.
-5. Compare-Object returns no differences.
-6. Documentation and repository are synchronized.
+1. Mandatory requirements are verified.
+2. Installation succeeds.
+3. Gameplay verification succeeds.
+4. Rollback succeeds.
+5. RestoreData restores the original patched installation.
+6. Compare-Object returns no differences.
+7. Gallery documentation is complete.
+8. Documentation and repository are synchronized.
 
 Release quality is prioritized over release frequency.

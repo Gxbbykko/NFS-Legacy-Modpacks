@@ -1,6 +1,6 @@
 # Release Engineering
 
-This document defines the release engineering standards, versioning rules, packaging workflow, validation requirements, checksum policy, and publishing process for **NFS Legacy Modpacks**.
+This document defines the release engineering standards, versioning rules, packaging workflow, validation requirements, checksum policy, documentation standards, and publishing process for **NFS Legacy Modpacks Release 2.0**.
 
 The objective is to ensure every public release is:
 
@@ -45,6 +45,9 @@ RestoreData Rollback
         │
         ▼
 Validation
+        │
+        ▼
+Documentation
         │
         ▼
 Public Release
@@ -134,11 +137,13 @@ These components form the validated Release 2.0 installer architecture.
 
 Every release must successfully complete:
 
+* Mandatory requirement validation
 * Game validation
 * Installation
 * Archive extraction
 * File deployment
 * Optional component installation
+* Gameplay verification
 * Rollback
 * RestoreData verification
 * Manifest verification
@@ -155,14 +160,33 @@ Rollback validation is mandatory.
 Validation consists of:
 
 1. Clean patched reference installation.
-2. Install modpack.
-3. Verify installed modpack.
-4. Uninstall using Restore Tool.
-5. Compare restored installation against the original reference.
+2. Verify mandatory requirements.
+3. Install modpack.
+4. Verify installed modpack.
+5. Uninstall using Restore Tool.
+6. Compare restored installation against the original reference.
 
 Verification is performed using PowerShell filesystem comparison.
 
 A successful comparison produces no differences.
+
+---
+
+# Documentation Requirements
+
+Every Release 2.0 publication includes standardized documentation.
+
+Documentation consists of:
+
+* Release README
+* Gallery
+* Mandatory Requirements proof
+* Installer workflow
+* Rollback validation
+* Before / After comparison
+* Gameplay comparison
+
+Documentation is considered part of the release engineering process.
 
 ---
 
@@ -232,6 +256,7 @@ Release notes should contain:
 * Rollback improvements
 * Validation summary
 * Compatibility
+* Gallery overview
 * Known issues
 * SHA-256 checksum
 
@@ -243,9 +268,11 @@ Public releases may contain:
 
 ```text
 Installer (.exe)
+Gallery/
 Release notes
-CHANGELOG
+CHANGELOG.md
 SHA256.txt
+README.md
 ```
 
 ---
@@ -315,6 +342,7 @@ Before publishing a public release, every supported title must successfully comp
 
 ## Installation
 
+* [x] Mandatory requirements verified
 * [x] Game detection verified
 * [x] Installation validation verified
 * [x] Archive extraction completed
@@ -338,7 +366,7 @@ Before publishing a public release, every supported title must successfully comp
 
 ## Validation
 
-* [x] Modpack functionality verified
+* [x] Gameplay verified
 * [x] Rollback completed
 * [x] Compare-Object verification passed
 * [x] Restored installation matches vanilla patched reference
@@ -349,8 +377,10 @@ Before publishing a public release, every supported title must successfully comp
 
 * [x] README updated
 * [x] CHANGELOG updated
-* [ ] Release notes updated
-* [ ] Screenshots updated (if applicable)
+* [x] Release READMEs updated
+* [x] Gallery synchronized
+* [x] Release engineering documentation synchronized
+* [x] Validation documentation synchronized
 
 ---
 
@@ -359,8 +389,7 @@ Before publishing a public release, every supported title must successfully comp
 * [ ] SHA-256 generated
 * [ ] Git tag created
 * [ ] GitHub Release created
-* [ ] Installer uploaded
-
+* [ ] Public installer uploaded
 
 ---
 
@@ -368,11 +397,13 @@ Before publishing a public release, every supported title must successfully comp
 
 A release is considered complete only when:
 
-1. Installation succeeds.
-2. Installation validation succeeds.
-3. Rollback succeeds.
-4. RestoreData successfully restores the original installation.
-5. Verification confirms the restored installation matches the original patched reference.
-6. Every supported title passes the complete validation workflow.
+1. Mandatory requirements are verified.
+2. Installation succeeds.
+3. Installation validation succeeds.
+4. Gameplay verification succeeds.
+5. Rollback succeeds.
+6. RestoreData successfully restores the original installation.
+7. Verification confirms the restored installation matches the original patched reference.
+8. Documentation and galleries are synchronized across the repository.
 
-Installer reliability, deterministic restoration, and preservation of the original games are prioritized over release speed.
+Installer reliability, deterministic restoration, comprehensive documentation, and preservation of the original games are prioritized over release speed.

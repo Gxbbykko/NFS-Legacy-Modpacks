@@ -2,7 +2,7 @@
 
 All notable changes to **NFS Legacy Modpacks** are documented in this file.
 
-The project follows a structured, release-oriented changelog documenting architectural milestones, installer evolution, rollback validation, and repository development.
+The project follows a structured, release-oriented changelog documenting architectural milestones, installer evolution, rollback validation, repository development, and release engineering.
 
 ---
 
@@ -12,7 +12,7 @@ The project follows a structured, release-oriented changelog documenting archite
 
 Release 2.0 represents the completion of the unified installer architecture shared across every supported Need for Speed title.
 
-This milestone concludes the transition from a traditional Inno Setup installer into a modular installer platform featuring a dedicated launcher, modern installation interface, optimized extraction pipeline, deterministic rollback system, and standardized deployment architecture.
+This milestone concludes the transition from a traditional Inno Setup installer into a modular installer platform featuring a dedicated launcher, modern installation interface, optimized extraction pipeline, deterministic rollback system, standardized deployment architecture, and comprehensive release documentation.
 
 Every supported title now shares the same validated installation and restoration framework.
 
@@ -33,8 +33,8 @@ Every supported title now shares the same validated installation and restoration
 
 * Automatic game detection
 * Installation validation
-* Latest official patch verification
-* Large Address Aware verification
+* Mandatory game version verification
+* Large Address Aware (4GB Patch) verification
 * Optional component framework
 * External package support
 * Live installation logging
@@ -49,7 +49,7 @@ Every supported title now shares the same validated installation and restoration
 * Manifest-driven uninstall
 * Automatic restoration of overwritten files
 * Automatic removal of newly installed files
-* Empty directory cleanup
+* Automatic empty directory cleanup
 * RestoreData protection attributes
 * SHA-256 comparison support
 * Deterministic rollback workflow
@@ -63,8 +63,11 @@ Every supported title now shares the same validated installation and restoration
 * Splash source
 * Updated Inno Setup scripts
 * Expanded documentation
-* Screenshot documentation
 * Release engineering documentation
+* Release-specific documentation
+* Gallery documentation
+* Mandatory Requirements documentation
+* Gameplay comparison documentation
 
 ---
 
@@ -76,7 +79,7 @@ The installer framework has been redesigned into a layered architecture.
 
 Previous architecture:
 
-```text
+```text id="r8yg8i"
 Setup.exe
         │
         ▼
@@ -85,7 +88,7 @@ Inno Setup
 
 Current Release 2.0 architecture:
 
-```text
+```text id="jdjlwm"
 SetupLauncher
         │
         ▼
@@ -110,11 +113,13 @@ RestoreData Rollback
 ### Standardization
 
 * Unified installer architecture across all supported titles
-* NFSU Gold Master architecture adopted as the reference implementation
+* NFSU gold-master architecture adopted as the reference implementation
 * Shared rollback engine
 * Shared validation workflow
 * Shared deployment structure
 * Shared installer philosophy
+* Standardized release documentation
+* Standardized gallery structure
 
 ---
 
@@ -123,23 +128,26 @@ RestoreData Rollback
 The Release 2.0 installer framework has been validated across every supported title.
 
 | Game                         | Installation | Rollback |
-| ---------------------------- | ------------ | -------- |
-| Need for Speed Underground   | ✅ PASS       | ✅ PASS   |
-| Need for Speed Underground 2 | ✅ PASS       | ✅ PASS   |
-| Need for Speed Most Wanted   | ✅ PASS       | ✅ PASS   |
-| Need for Speed Carbon        | ✅ PASS       | ✅ PASS   |
-| Need for Speed ProStreet     | ✅ PASS       | ✅ PASS   |
-| Need for Speed Undercover    | ✅ PASS       | ✅ PASS   |
+| ---------------------------- | :----------: | :------: |
+| Need for Speed Underground   |    ✅ PASS    |  ✅ PASS  |
+| Need for Speed Underground 2 |    ✅ PASS    |  ✅ PASS  |
+| Need for Speed Most Wanted   |    ✅ PASS    |  ✅ PASS  |
+| Need for Speed Carbon        |    ✅ PASS    |  ✅ PASS  |
+| Need for Speed ProStreet     |    ✅ PASS    |  ✅ PASS  |
+| Need for Speed Undercover    |    ✅ PASS    |  ✅ PASS  |
 
 Validation confirms:
 
 * Successful installation
+* Mandatory requirement verification
 * Successful extraction
 * Successful rollback
 * Restoration of overwritten files
 * Removal of newly installed files
 * Cleanup of empty directories
 * Restoration to the original patched installation
+* Gameplay verification
+* Release gallery documentation
 
 Rollback verification was performed by comparing the restored installation against a clean vanilla patched reference.
 
@@ -158,18 +166,20 @@ Rollback verification was performed by comparing the restored installation again
 
 ## Required Game Versions
 
-> **IMPORTANT**
+> **MANDATORY**
 >
-> Every supported title must be updated to the latest official version before installing a modpack.
+> Every supported title must be updated to the latest officially supported version and have the Large Address Aware (4GB Patch) applied before installation.
 
-| Game                         | Required Version |
-| ---------------------------- | ---------------- |
-| Need for Speed Underground   | **1.4.0**        |
-| Need for Speed Underground 2 | **1.2.0**        |
-| Need for Speed Most Wanted   | **1.3.0**        |
-| Need for Speed Carbon        | **1.4.0**        |
-| Need for Speed ProStreet     | **1.1.0**        |
-| Need for Speed Undercover    | **1.0.0.1**      |
+| Game                         | Required Version                  |
+| ---------------------------- | --------------------------------- |
+| Need for Speed Underground   | **1.4**                           |
+| Need for Speed Underground 2 | **1.2**                           |
+| Need for Speed Most Wanted   | **1.3 (Black Edition supported)** |
+| Need for Speed Carbon        | **Collector's Edition 1.4**       |
+| Need for Speed ProStreet     | **1.1**                           |
+| Need for Speed Undercover    | **1.0.0.1**                       |
+
+These requirements are validated automatically by the installer.
 
 ---
 
@@ -188,6 +198,9 @@ Major milestones completed:
 * Six-title validation
 * Repository modernization
 * Documentation overhaul
+* Release gallery system
+* Mandatory Requirements documentation
+* Before / After gameplay documentation
 
 This release establishes the foundation for future public modpack releases while maintaining deterministic installation, deterministic rollback, and reproducible restoration across every supported title.
 
@@ -216,11 +229,12 @@ This phase served as the foundation for the Release 2.0 architecture.
 
 Future updates will focus on:
 
-* Public Release packaging
-* Documentation expansion
+* Public release packaging
+* Expanded documentation
 * Additional installer polish
-* Expanded screenshot gallery
+* Extended gallery documentation
 * Future compatibility improvements
+* Continuous maintenance of the standardized Release 2.0 architecture
 
 ---
 
@@ -228,24 +242,24 @@ Future updates will focus on:
 
 The project follows semantic versioning.
 
-```text
+```text id="7grqfm"
 Major.Minor.Patch
 ```
 
 Examples:
 
-```text
+```text id="p8rj44"
 2.0.0
 2.1.0
 2.1.1
 3.0.0
 ```
 
-| Version | Meaning                                            |
-| ------- | -------------------------------------------------- |
-| Major   | Architectural changes                              |
-| Minor   | New installer functionality                        |
-| Patch   | Bug fixes, validation improvements and maintenance |
+| Version | Meaning                                             |
+| ------- | --------------------------------------------------- |
+| Major   | Architectural changes                               |
+| Minor   | New installer functionality                         |
+| Patch   | Bug fixes, validation improvements, and maintenance |
 
 ---
 
@@ -253,11 +267,13 @@ Examples:
 
 A release is only considered complete when:
 
-1. Installation succeeds.
-2. Installation validation succeeds.
-3. Rollback succeeds.
-4. Restored installation matches the original patched reference.
-5. Rollback verification passes.
-6. Installer behavior is reproducible across every supported title.
+1. Mandatory requirements are verified.
+2. Installation succeeds.
+3. Installation validation succeeds.
+4. Gameplay verification succeeds.
+5. Rollback succeeds.
+6. Restored installation matches the original patched reference.
+7. Compare-Object returns no differences.
+8. Documentation and release galleries are synchronized.
 
-Installer reliability, deterministic restoration, and preservation of the original games remain the highest priorities of the project.
+Installer reliability, deterministic restoration, comprehensive documentation, and preservation of the original games remain the highest priorities of the project.
