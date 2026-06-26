@@ -1,14 +1,25 @@
 # =========================================================
+
 # NFS Legacy Modpacks - Release 2.0
-#.gitignore
+
+# .gitignore
+
 #
-# Excludes build artifacts, generated files, temporary data,
-# installer payloads and local development files while keeping
-# all source code and documentation under version control.
+
+# Excludes build artifacts, generated files, temporary runtime
+
+# data, installer payloads, and local development files while
+
+# preserving all source code, documentation, templates, and
+
+# repository assets under version control.
+
 # =========================================================
 
 # =========================================================
+
 # Build outputs
+
 # =========================================================
 
 Build/
@@ -18,6 +29,7 @@ Release/
 Debug/
 publish/
 artifacts/
+TestResults/
 
 bin/
 obj/
@@ -27,7 +39,9 @@ obj/
 **/publish/
 
 # =========================================================
+
 # Installer binaries / compiled executables
+
 # =========================================================
 
 *.exe
@@ -44,7 +58,9 @@ obj/
 *.ipdb
 
 # =========================================================
-# Compressed archives / payloads
+
+# Compressed archives / installer payloads
+
 # =========================================================
 
 *.arc
@@ -55,7 +71,9 @@ obj/
 *.gz
 
 # =========================================================
-# Large generated installer folders
+
+# Generated installer project folders
+
 # =========================================================
 
 source/SetupLauncher/Backend/
@@ -67,7 +85,9 @@ _backend/
 _DEBUG_RUN/
 
 # =========================================================
-# Temporary extraction / installer runtime data
+
+# Installer runtime / rollback data
+
 # =========================================================
 
 _LegacyInstaller/
@@ -80,7 +100,9 @@ install_error.txt
 LegacyUI_crash.log
 
 # =========================================================
-# Rollback validation files
+
+# Rollback validation
+
 # =========================================================
 
 baseline_vanilla.csv
@@ -89,7 +111,9 @@ after_uninstall.csv
 telemetry_*.csv
 
 # =========================================================
-# Local testing folders
+
+# Local testing / sandbox directories
+
 # =========================================================
 
 Test/
@@ -100,7 +124,9 @@ Sandbox/
 Scratch/
 
 # =========================================================
+
 # Temporary files
+
 # =========================================================
 
 *.tmp
@@ -112,7 +138,9 @@ Scratch/
 *.tmp.arc
 
 # =========================================================
+
 # Windows / macOS generated files
+
 # =========================================================
 
 Thumbs.db
@@ -120,7 +148,9 @@ Desktop.ini
 .DS_Store
 
 # =========================================================
+
 # IDE / editor settings
+
 # =========================================================
 
 .vs/
@@ -133,26 +163,34 @@ Desktop.ini
 *.userosscache
 *.sln.docstates
 *.code-workspace
+*.VC.db
+*.opendb
 
 _ReSharper*/
 *.DotSettings.user
 
 # =========================================================
+
 # NuGet / .NET
+
 # =========================================================
 
 packages/
 *.nupkg
 
 # =========================================================
+
 # Python cache
+
 # =========================================================
 
-__pycache__/
+**pycache**/
 *.pyc
 
 # =========================================================
+
 # Game-generated configuration / diagnostic files
+
 # =========================================================
 
 nextgenfx_settings.ini
@@ -162,27 +200,61 @@ reshade.ini
 *.log
 
 # =========================================================
+
 # Source-control placeholders
+
 # =========================================================
 
 !**/.gitkeep
 
 # =========================================================
+
 # Repository notes
+
 # =========================================================
+
 #
-# Gallery screenshots inside:
+
+# The following directories are intentionally tracked:
+
 #
-#   releases/**/Gallery/
-#   screenshots/
+
+# releases/**/Gallery/
+
+# screenshots/
+
 #
-# are intentionally version-controlled as part of the Release
-# 2.0 documentation and validation proof. They must NOT be
-# ignored.
+
+# These contain release documentation, validation evidence,
+
+# and screenshots used throughout the project.
+
 #
-# Compiled installers, archives and generated runtime files
-# are intentionally excluded from this repository.
+
+# Generated installers, compressed payloads, temporary runtime
+
+# files, rollback metadata, and local development artifacts are
+
+# intentionally excluded from source control.
+
 #
-# Public releases are distributed through GitHub Releases and
-# Nexus Mods.
-```
+
+# Public releases are distributed through:
+
+#
+
+# • GitHub Releases
+
+# • Nexus Mods
+
+#
+
+# Release Engineering:
+
+#
+
+# Version: Release 2.0
+
+# Repository: NFS Legacy Modpacks
+
+# =========================================================
