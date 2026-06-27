@@ -11,6 +11,10 @@
 
 	<ItemGroup>
 		<Content Include="Assets\Icons\*.ico" CopyToOutputDirectory="PreserveNewest" />
+		<EmbeddedResource Include="Tools\7z.exe" Condition="Exists('Tools\7z.exe')" />
+		<EmbeddedResource Include="Tools\7z.dll" Condition="Exists('Tools\7z.dll')" />
+		<EmbeddedResource Include="Tools\Splash.exe" Condition="Exists('Tools\Splash.exe')" />
+		<EmbeddedResource Include="SplashImages\*.png" Condition="Exists('SplashImages')" />
 	</ItemGroup>
 
 </Project>
