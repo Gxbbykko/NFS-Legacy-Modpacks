@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
 
 internal static class Program
@@ -35,195 +34,136 @@ internal static class Program
         var approvedInstallers = new Dictionary<string, ApprovedInstaller>(StringComparer.OrdinalIgnoreCase)
         {
             [NormalizeAppId("{6E2E96A4-8A9A-45F9-BD76-5514E2D1A140}")] =
-                new ApprovedInstaller(
-                    "{6E2E96A4-8A9A-45F9-BD76-5514E2D1A140}",
-                    "nfsu",
-                    "UndergroundMP.exe",
-                    "Underground Legacy Modpack",
-                    @"Assets\Icons\NFSU.ico"),
+                new ApprovedInstaller("{6E2E96A4-8A9A-45F9-BD76-5514E2D1A140}", "nfsu", "UndergroundMP.exe", "Underground Legacy Modpack", @"Assets\Icons\NFSU.ico"),
 
             [NormalizeAppId("{B42B49F2-6F0C-48D6-91D2-2E1F37A6C2D8}")] =
-                new ApprovedInstaller(
-                    "{B42B49F2-6F0C-48D6-91D2-2E1F37A6C2D8}",
-                    "nfsu2",
-                    "Underground2MP.exe",
-                    "Underground 2 Legacy Modpack",
-                    @"Assets\Icons\NFSU2.ico"),
+                new ApprovedInstaller("{B42B49F2-6F0C-48D6-91D2-2E1F37A6C2D8}", "nfsu2", "Underground2MP.exe", "Underground 2 Legacy Modpack", @"Assets\Icons\NFSU2.ico"),
 
             [NormalizeAppId("{E0C9B896-11D2-41A7-B9B0-0B71D0F3E2A5}")] =
-                new ApprovedInstaller(
-                    "{E0C9B896-11D2-41A7-B9B0-0B71D0F3E2A5}",
-                    "nfsmw",
-                    "MostWantedMP.exe",
-                    "Most Wanted Legacy Modpack",
-                    @"Assets\Icons\NFSMW.ico"),
+                new ApprovedInstaller("{E0C9B896-11D2-41A7-B9B0-0B71D0F3E2A5}", "nfsmw", "MostWantedMP.exe", "Most Wanted Legacy Modpack", @"Assets\Icons\NFSMW.ico"),
 
             [NormalizeAppId("{D1B0EFD4-4570-4F52-93A2-7A4A8E42D6C1}")] =
-                new ApprovedInstaller(
-                    "{D1B0EFD4-4570-4F52-93A2-7A4A8E42D6C1}",
-                    "nfsc",
-                    "CarbonMP.exe",
-                    "Carbon Legacy Modpack",
-                    @"Assets\Icons\NFSC.ico"),
+                new ApprovedInstaller("{D1B0EFD4-4570-4F52-93A2-7A4A8E42D6C1}", "nfsc", "CarbonMP.exe", "Carbon Legacy Modpack", @"Assets\Icons\NFSC.ico"),
 
             [NormalizeAppId("{9E3C25AE-2F4B-407D-9B45-8E01C07F73D6}")] =
-                new ApprovedInstaller(
-                    "{9E3C25AE-2F4B-407D-9B45-8E01C07F73D6}",
-                    "nfsps",
-                    "ProStreetMP.exe",
-                    "ProStreet Legacy Modpack",
-                    @"Assets\Icons\NFSPS.ico"),
+                new ApprovedInstaller("{9E3C25AE-2F4B-407D-9B45-8E01C07F73D6}", "nfsps", "ProStreetMP.exe", "ProStreet Legacy Modpack", @"Assets\Icons\NFSPS.ico"),
 
             [NormalizeAppId("{5F1C8E3D-9A24-44C1-BB0A-51C8D6B74E92}")] =
-                new ApprovedInstaller(
-                    "{5F1C8E3D-9A24-44C1-BB0A-51C8D6B74E92}",
-                    "nfsuc",
-                    "UndercoverMP.exe",
-                    "Undercover Legacy Modpack",
-                    @"Assets\Icons\NFSUC.ico")
+                new ApprovedInstaller("{5F1C8E3D-9A24-44C1-BB0A-51C8D6B74E92}", "nfsuc", "UndercoverMP.exe", "Undercover Legacy Modpack", @"Assets\Icons\NFSUC.ico")
         };
 
-        Dictionary<string, string> config;
-
         try
         {
-            config = ReadEmbeddedIni("setup_launcher.ini");
-        }
-        catch (Exception ex)
-        {
-            ShowError("Failed to read embedded launcher configuration.\n\n" + ex.Message, "NFS Legacy Modpacks");
-            return;
-        }
+            Dictionary<string, string> config = ReadLocalIni(launcherDir, "setup_launcher.ini");
 
-        string configuredAppId = NormalizeAppId(GetRequired(config, "appid"));
+            string configuredAppId = NormalizeAppId(GetRequired(config, "appid"));
 
-        if (configuredAppId.Length == 0)
-        {
-            ShowError("Launcher configuration is invalid.\n\nMissing required key: appid", "NFS Legacy Modpacks");
-            return;
-        }
+            if (!approvedInstallers.TryGetValue(configuredAppId, out ApprovedInstaller? approved))
+            {
+                ShowError("Launcher configuration is not approved.\n\nUnknown AppId:\n" + configuredAppId, "NFS Legacy Modpacks");
+                return;
+            }
 
-        if (!approvedInstallers.TryGetValue(configuredAppId, out ApprovedInstaller? approved))
-        {
-            ShowError("Launcher configuration is not approved.\n\nUnknown AppId:\n" + configuredAppId, "NFS Legacy Modpacks");
-            return;
-        }
+            string configuredGame = GetRequired(config, "game");
+            string configuredBackend = GetRequired(config, "backend");
+            string configuredTitle = GetRequired(config, "title");
+            string configuredIcon = GetOptional(config, "icon");
+            string configuredArguments = GetOptional(config, "arguments");
 
-        string configuredGame = GetRequired(config, "game");
-        string configuredBackend = GetRequired(config, "backend");
-        string configuredTitle = GetRequired(config, "title");
-        string configuredIcon = GetOptional(config, "icon");
-        string configuredArguments = GetOptional(config, "arguments");
+            if (configuredArguments.Length == 0)
+                configuredArguments = "/SILENT";
 
-        if (configuredArguments.Length == 0)
-            configuredArguments = "/SILENT";
+            if (configuredIcon.Length == 0)
+                configuredIcon = approved.IconPath;
 
-        if (configuredIcon.Length == 0)
-            configuredIcon = approved.IconPath;
+            if (!StringEquals(configuredGame, approved.Game))
+            {
+                ShowError("Launcher configuration does not match the approved game id.\n\nExpected: " + approved.Game + "\nConfigured: " + configuredGame, approved.Title);
+                return;
+            }
 
-        if (!StringEquals(configuredGame, approved.Game))
-        {
-            ShowError(
-                "Launcher configuration does not match the approved game id.\n\n" +
-                "Expected: " + approved.Game + "\n" +
-                "Configured: " + configuredGame,
-                approved.Title
+            if (!StringEquals(Path.GetFileName(configuredBackend), approved.BackendFileName))
+            {
+                ShowError("Launcher configuration does not match the approved backend.\n\nExpected: " + approved.BackendFileName + "\nConfigured: " + configuredBackend, approved.Title);
+                return;
+            }
+
+            if (!StringEquals(configuredTitle, approved.Title))
+            {
+                ShowError("Launcher configuration does not match the approved title.\n\nExpected: " + approved.Title + "\nConfigured: " + configuredTitle, approved.Title);
+                return;
+            }
+
+            if (!StringEquals(Path.GetFileName(configuredIcon), Path.GetFileName(approved.IconPath)))
+            {
+                ShowError("Launcher configuration does not match the approved icon.\n\nExpected: " + approved.IconPath + "\nConfigured: " + configuredIcon, approved.Title);
+                return;
+            }
+
+            if (!StringEquals(configuredArguments, "/SILENT"))
+            {
+                ShowError("Launcher configuration uses unsupported base arguments.\n\nExpected: /SILENT\nConfigured: " + configuredArguments, approved.Title);
+                return;
+            }
+
+            string backendPath = ResolveBackendPath(launcherDir, configuredBackend, approved.BackendFileName);
+
+            if (!File.Exists(backendPath))
+            {
+                ShowError("Installer backend was not found.\n\nMissing:\n" + backendPath, approved.Title);
+                return;
+            }
+
+            string? selectedGameFolder = SelectGameFolder(approved.Title);
+
+            if (string.IsNullOrWhiteSpace(selectedGameFolder))
+                return;
+
+            if (!Directory.Exists(selectedGameFolder))
+            {
+                ShowError("Selected game folder does not exist:\n\n" + selectedGameFolder, approved.Title);
+                return;
+            }
+
+            string finalArguments = configuredArguments.Trim() + " /DIR=\"" + selectedGameFolder + "\"";
+            string workingDir = Path.GetDirectoryName(backendPath) ?? launcherDir;
+
+            File.WriteAllText(
+                Path.Combine(launcherDir, "launcher_debug.log"),
+                "launcherDir=" + launcherDir + Environment.NewLine +
+                "backendPath=" + backendPath + Environment.NewLine +
+                "workingDir=" + workingDir + Environment.NewLine +
+                "selectedGameFolder=" + selectedGameFolder + Environment.NewLine +
+                "arguments=" + finalArguments + Environment.NewLine
             );
-            return;
-        }
 
-        if (!StringEquals(Path.GetFileName(configuredBackend), approved.BackendFileName))
-        {
-            ShowError(
-                "Launcher configuration does not match the approved backend.\n\n" +
-                "Expected: " + approved.BackendFileName + "\n" +
-                "Configured: " + configuredBackend,
-                approved.Title
-            );
-            return;
-        }
-
-        if (!StringEquals(configuredTitle, approved.Title))
-        {
-            ShowError(
-                "Launcher configuration does not match the approved title.\n\n" +
-                "Expected: " + approved.Title + "\n" +
-                "Configured: " + configuredTitle,
-                approved.Title
-            );
-            return;
-        }
-
-        if (!StringEquals(configuredIcon, approved.IconPath))
-        {
-            ShowError(
-                "Launcher configuration does not match the approved icon.\n\n" +
-                "Expected: " + approved.IconPath + "\n" +
-                "Configured: " + configuredIcon,
-                approved.Title
-            );
-            return;
-        }
-
-        if (!StringEquals(configuredArguments, "/SILENT"))
-        {
-            ShowError(
-                "Launcher configuration uses unsupported base arguments.\n\n" +
-                "Expected: /SILENT\n" +
-                "Configured: " + configuredArguments,
-                approved.Title
-            );
-            return;
-        }
-
-        string backendPath = ResolveRelativePath(launcherDir, configuredBackend);
-
-        if (!File.Exists(backendPath))
-        {
-            ShowError("Installer backend was not found.\n\nMissing:\n" + backendPath, approved.Title);
-            return;
-        }
-
-        string iconPath = ResolveRelativePath(launcherDir, configuredIcon);
-
-        if (!File.Exists(iconPath))
-        {
-            ShowError("Launcher icon was not found.\n\nMissing:\n" + iconPath, approved.Title);
-            return;
-        }
-
-        string? selectedGameFolder = SelectGameFolder(approved.Title);
-
-        if (string.IsNullOrWhiteSpace(selectedGameFolder))
-            return;
-
-        if (!Directory.Exists(selectedGameFolder))
-        {
-            ShowError("Selected game folder does not exist:\n\n" + selectedGameFolder, approved.Title);
-            return;
-        }
-
-        string finalArguments =
-            configuredArguments.Trim() +
-            " /DIR=" + QuoteArgument(selectedGameFolder);
-
-        try
-        {
             var psi = new ProcessStartInfo
             {
                 FileName = backendPath,
                 Arguments = finalArguments,
-                WorkingDirectory = Path.GetDirectoryName(backendPath) ?? launcherDir,
+                WorkingDirectory = workingDir,
                 UseShellExecute = true
             };
 
-            if (Process.Start(psi) == null)
-                ShowError("Failed to start installer backend.", approved.Title);
+            Process.Start(psi);
         }
         catch (Exception ex)
         {
-            ShowError("Failed to start installer backend.\n\n" + ex.Message, approved.Title);
+            ShowError("Failed to start installer backend.\n\n" + ex.Message, "NFS Legacy Modpacks");
         }
+    }
+
+    private static string ResolveBackendPath(string launcherDir, string configuredBackend, string approvedBackendFileName)
+    {
+        string cleanBackend = configuredBackend.Trim().Trim('"');
+
+        if (Path.IsPathRooted(cleanBackend))
+            return cleanBackend;
+
+        if (!string.IsNullOrWhiteSpace(Path.GetDirectoryName(cleanBackend)))
+            return Path.GetFullPath(Path.Combine(launcherDir, cleanBackend));
+
+        return Path.GetFullPath(Path.Combine(launcherDir, "_backend", approvedBackendFileName));
     }
 
     private static string? SelectGameFolder(string title)
@@ -235,32 +175,21 @@ internal static class Program
             ShowNewFolderButton = false
         };
 
-        DialogResult result = dialog.ShowDialog();
-
-        if (result != DialogResult.OK)
-            return null;
-
-        return dialog.SelectedPath;
+        return dialog.ShowDialog() == DialogResult.OK ? dialog.SelectedPath : null;
     }
 
-    private static string ResolveRelativePath(string baseDir, string path)
+    private static Dictionary<string, string> ReadLocalIni(string launcherDir, string fileName)
     {
-        string cleanPath = path.Trim().Trim('"');
+        string iniPath = Path.Combine(launcherDir, fileName);
 
-        if (Path.IsPathRooted(cleanPath))
-            return cleanPath;
+        if (!File.Exists(iniPath))
+            throw new FileNotFoundException("setup_launcher.ini was not found beside the launcher:\n" + iniPath);
 
-        return Path.GetFullPath(Path.Combine(baseDir, cleanPath));
+        return ParseIni(File.ReadAllText(iniPath));
     }
 
-    private static string QuoteArgument(string value)
+    private static Dictionary<string, string> ParseIni(string content)
     {
-        return "\"" + value.Replace("\"", "\\\"") + "\"";
-    }
-
-    private static Dictionary<string, string> ReadEmbeddedIni(string fileName)
-    {
-        string content = ReadEmbeddedTextResource(fileName);
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         using var reader = new StringReader(content);
@@ -292,59 +221,19 @@ internal static class Program
         return result;
     }
 
-    private static string ReadEmbeddedTextResource(string fileName)
-    {
-        Assembly assembly = Assembly.GetExecutingAssembly();
-        string resourceName = FindEmbeddedResourceName(assembly, fileName);
-
-        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
-
-        if (stream == null)
-            throw new FileNotFoundException("Embedded resource stream was not found: " + fileName);
-
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
-
-    private static string FindEmbeddedResourceName(Assembly assembly, string fileName)
-    {
-        string[] resourceNames = assembly.GetManifestResourceNames();
-
-        foreach (string resourceName in resourceNames)
-        {
-            if (resourceName.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
-                return resourceName;
-        }
-
-        throw new FileNotFoundException(
-            "Embedded resource was not found: " + fileName + "\n\nAvailable resources:\n" +
-            string.Join("\n", resourceNames)
-        );
-    }
-
     private static string GetRequired(Dictionary<string, string> config, string key)
     {
-        if (!config.TryGetValue(key, out string? value))
-            return string.Empty;
-
-        return value.Trim();
+        return config.TryGetValue(key, out string? value) ? value.Trim() : string.Empty;
     }
 
     private static string GetOptional(Dictionary<string, string> config, string key)
     {
-        if (!config.TryGetValue(key, out string? value))
-            return string.Empty;
-
-        return value.Trim();
+        return config.TryGetValue(key, out string? value) ? value.Trim() : string.Empty;
     }
 
     private static string NormalizeAppId(string value)
     {
-        return value
-            .Trim()
-            .TrimStart('{')
-            .TrimEnd('}')
-            .ToUpperInvariant();
+        return value.Trim().TrimStart('{').TrimEnd('}').ToUpperInvariant();
     }
 
     private static bool StringEquals(string left, string right)
