@@ -129,7 +129,7 @@ internal static class Program
             string workingDir = Path.GetDirectoryName(backendPath) ?? launcherDir;
 
             File.WriteAllText(
-                Path.Combine(launcherDir, "launcher_debug.log"),
+                Path.Combine(launcherDir, "SetupLauncher.log"),
                 "launcherDir=" + launcherDir + Environment.NewLine +
                 "backendPath=" + backendPath + Environment.NewLine +
                 "workingDir=" + workingDir + Environment.NewLine +
